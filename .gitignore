@@ -1,0 +1,13 @@
+# Archivos comprimidos
+Estacionamiento_APP.zip
+
+# Dependencias
+Estacionamiento_APP/node_modules/
+
+# Expo
+Estacionamiento_APP/.expo/
+
+# Variables privadas
+.env
+.env.*
+!.env.example
