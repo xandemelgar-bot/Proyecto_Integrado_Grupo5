@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-
+import ReservationsAdminScreen from "../screens/admin/ReservationsAdminScreen";
 import { useAuth } from "../contexts/AuthContext";
 
 import LoginScreen from "../screens/auth/LoginScreen";
