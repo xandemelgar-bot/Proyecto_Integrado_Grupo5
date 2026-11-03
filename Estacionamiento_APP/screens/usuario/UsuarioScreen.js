@@ -30,8 +30,8 @@ export default function UsuarioScreen() {
   const [espacios, setEspacios] = useState({});
   const [cargando, setCargando] = useState(true);
   const [reservando, setReservando] = useState(false);
+  
 
-  // Escuchar los cambios de los espacios en Firebase
   useEffect(() => {
     const referencia = collection(db, 'espacios');
 
