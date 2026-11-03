@@ -1,5 +1,6 @@
 
 import React from "react";
+
 import {
   View,
   Text,
@@ -12,11 +13,15 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { useAuth } from "../contexts/AuthContext";
 
+// Navegación del administrador
+import AdminNavigator from "./AdminNavigator";
+
+// Pantallas de autenticación
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
 
-import AdminScreen from "../screens/admin/AdminScreen";
+// Pantalla temporal del usuario
 import UsuarioScreen from "../screens/usuario/UsuarioTemporalScreen";
 
 const Stack = createNativeStackNavigator();
@@ -35,7 +40,11 @@ export default function AppNavigator() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563EB" />
+        <ActivityIndicator
+          size="large"
+          color="#2563EB"
+        />
+
         <Text style={styles.text}>
           Cargando aplicación...
         </Text>
@@ -64,7 +73,9 @@ export default function AppNavigator() {
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+    >
       {!usuario ? (
         <>
           <Stack.Screen
@@ -85,7 +96,7 @@ export default function AppNavigator() {
       ) : esAdmin ? (
         <Stack.Screen
           name="Admin"
-          component={AdminScreen}
+          component={AdminNavigator}
         />
       ) : (
         <Stack.Screen
