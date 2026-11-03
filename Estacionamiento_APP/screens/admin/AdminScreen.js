@@ -5,12 +5,44 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
 
 
 import COLORS from '../../constants/colors';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function AdminScreen() {
+  const { cerrarSesion } = useAuth();
+
+  const handleCerrarSesion = () => {
+    Alert.alert(
+      'Cerrar sesión',
+      '¿Estás seguro de que deseas cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await cerrarSesion();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'No se pudo cerrar la sesión.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>
@@ -58,6 +90,14 @@ export default function AdminScreen() {
       <Text style={styles.note}>
         Datos simulados para probar el diseño.
       </Text>
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={handleCerrarSesion}
+      >
+        <Text style={styles.logoutText}>
+          Cerrar sesión
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -112,5 +152,18 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     fontSize: 12,
+  },
+  logoutButton: {
+    backgroundColor: COLORS.danger,
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 25,
+    marginBottom: 40,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
