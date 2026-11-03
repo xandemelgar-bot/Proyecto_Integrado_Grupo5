@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-
+navigation.navigate("ParkingManagement");
 
 import COLORS from '../../constants/colors';
 
