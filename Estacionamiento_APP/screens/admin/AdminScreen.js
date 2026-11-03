@@ -2,6 +2,35 @@ import React from 'react';
 import { StyleSheet, Text, View, SafeAreaView } from 'react-native';
 
 export default function AdminScreen() {
+  const { cerrarSesion } = useAuth();
+
+  const handleCerrarSesion = () => {
+    Alert.alert(
+      'Cerrar sesión',
+      '¿Estás seguro de que deseas cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await cerrarSesion();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'No se pudo cerrar la sesión.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -33,5 +62,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     textAlign: 'center',
+  },
+  logoutButton: {
+    backgroundColor: COLORS.danger,
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 25,
+    marginBottom: 40,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
