@@ -12,12 +12,12 @@ import {
 import COLORS from '../../constants/colors';
 import { useAuth } from '../../hooks/useAuth';
 
-export default function AdminScreen() {
+export default function AdminScreen({ navigation }) {
 
-  // Obtener función de Firebase
+  // Obtener la función para cerrar sesión
   const { cerrarSesion } = useAuth();
 
-  // Función para cerrar sesión
+  // Cerrar sesión con confirmación
   const handleCerrarSesion = () => {
     Alert.alert(
       'Cerrar sesión',
@@ -48,8 +48,12 @@ export default function AdminScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+    >
 
+      {/* ENCABEZADO */}
       <Text style={styles.title}>
         Panel de administrador
       </Text>
@@ -58,13 +62,18 @@ export default function AdminScreen() {
         Resumen del estacionamiento
       </Text>
 
+      {/* ESTACIONAMIENTOS TOTALES */}
       <View style={styles.card}>
         <Text style={styles.cardLabel}>
           Estacionamientos totales
         </Text>
-        <Text style={styles.cardValue}>24</Text>
+
+        <Text style={styles.cardValue}>
+          24
+        </Text>
       </View>
 
+      {/* ESTADÍSTICAS */}
       <View style={styles.row}>
 
         <View style={[styles.card, styles.half]}>
@@ -99,25 +108,80 @@ export default function AdminScreen() {
 
       </View>
 
+      {/* ADMINISTRACIÓN */}
+      <Text style={styles.sectionTitle}>
+        Administración
+      </Text>
+
+      {/* BOTÓN DE ESTACIONAMIENTOS */}
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() =>
+          navigation.navigate('ParkingManagement')
+        }
+      >
+        <View style={styles.optionRow}>
+          <Text style={styles.optionText}>
+            🚗 Monitoreo de estacionamientos
+          </Text>
+
+          <Text style={styles.arrow}>
+            ›
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* BOTÓN DE RESERVACIONES */}
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() =>
+          navigation.navigate('ReservationsAdmin')
+        }
+      >
+        <View style={styles.optionRow}>
+          <Text style={styles.optionText}>
+            📅 Gestión de reservaciones
+          </Text>
+
+          <Text style={styles.arrow}>
+            ›
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* FUNCIONES FUTURAS */}
       <Text style={styles.sectionTitle}>
         Próximas funciones
       </Text>
 
       <View style={styles.card}>
-        <Text>🚗 Monitoreo de estacionamientos</Text>
-        <Text>💰 Gestión de tarifas</Text>
-        <Text>📊 Reportes de uso</Text>
-        <Text>🧠 Predicciones con IA</Text>
+        <Text style={styles.futureText}>
+          💰 Gestión de tarifas
+        </Text>
+
+        <Text style={styles.futureText}>
+          📊 Reportes de uso
+        </Text>
+
+        <Text style={styles.futureText}>
+          🧠 Predicciones con IA
+        </Text>
       </View>
 
+      {/* AVISO DE DATOS SIMULADOS */}
       <Text style={styles.note}>
-        Datos simulados para probar el diseño.
+        Las estadísticas mostradas son simuladas.
+        Próximamente se conectarán con Firebase
+        y los sensores Arduino.
       </Text>
 
-      {/* BOTÓN PARA CERRAR SESIÓN */}
+      {/* BOTÓN CERRAR SESIÓN */}
       <TouchableOpacity
         style={styles.logoutButton}
         onPress={handleCerrarSesion}
+        activeOpacity={0.7}
       >
         <Text style={styles.logoutText}>
           Cerrar sesión
@@ -129,10 +193,15 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+
+  content: {
     padding: 20,
+    paddingBottom: 40,
   },
 
   title: {
@@ -183,19 +252,44 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  optionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+    flex: 1,
+  },
+
+  arrow: {
+    fontSize: 25,
+    color: COLORS.textSecondary,
+    marginLeft: 10,
+  },
+
+  futureText: {
+    fontSize: 14,
+    color: COLORS.text,
+    marginBottom: 5,
+  },
+
   note: {
     color: COLORS.textSecondary,
     textAlign: 'center',
     fontSize: 12,
+    lineHeight: 19,
+    marginTop: 5,
   },
 
-  // ESTILOS DEL BOTÓN CERRAR SESIÓN
   logoutButton: {
     backgroundColor: COLORS.danger,
     padding: 16,
     borderRadius: 12,
     marginTop: 25,
-    marginBottom: 40,
     alignItems: 'center',
   },
 
@@ -204,4 +298,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+
 });
