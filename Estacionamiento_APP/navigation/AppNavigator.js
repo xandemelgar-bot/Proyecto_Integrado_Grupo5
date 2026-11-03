@@ -17,7 +17,7 @@ import RegisterScreen from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
 
 import AdminScreen from "../screens/admin/AdminScreen";
-import UsuarioScreen from "../screens/usuario/UsuarioScreen";
+import UsuarioScreen from "../screens/usuario/UsuarioTemporalScreen";
 
 const Stack = createNativeStackNavigator();
 
