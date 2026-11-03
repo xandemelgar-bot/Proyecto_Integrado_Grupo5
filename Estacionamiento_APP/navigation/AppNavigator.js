@@ -7,6 +7,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import AdminScreen from '../screens/admin/AdminScreen';
 import UsuarioScreen from '../screens/usuario/UsuarioScreen';
+import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -47,6 +48,11 @@ export default function AppNavigator() {
           name="Usuario"
           component={UsuarioScreen}
           options={{ title: 'Estacionamiento Inteligente' }}
+        />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
