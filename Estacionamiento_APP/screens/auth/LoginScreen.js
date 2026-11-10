@@ -20,7 +20,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path } from "react-native-svg";
 
 import { useAuth } from "../../hooks/useAuth";
-import C from "../../constants/colors";
+
+// ==========================================
+// LOGIN SCREEN
+// ==========================================
 
 export default function LoginScreen({ navigation }) {
   const { iniciarSesion } = useAuth();
@@ -31,7 +34,7 @@ export default function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   // ==========================================
-  // LÓGICA ORIGINAL - SIN MODIFICACIONES
+  // LÓGICA ORIGINAL
   // ==========================================
 
   const login = async () => {
@@ -44,7 +47,11 @@ export default function LoginScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await iniciarSesion(correo.trim().toLowerCase(), contrasena);
+
+      await iniciarSesion(
+        correo.trim().toLowerCase(),
+        contrasena
+      );
     } catch (e) {
       Alert.alert(
         "No se pudo iniciar sesión",
@@ -85,6 +92,7 @@ export default function LoginScreen({ navigation }) {
           contentContainerStyle={s.scroll}
         >
           {/* FONDO PRINCIPAL */}
+
           <LinearGradient
             colors={[
               "#EAF4FF",
@@ -110,10 +118,12 @@ export default function LoginScreen({ navigation }) {
             style={s.hero}
           >
             {/* CÍRCULOS DECORATIVOS */}
+
             <View style={s.circleOne} />
             <View style={s.circleTwo} />
 
             {/* LOGOTIPO */}
+
             <View style={s.logoContainer}>
               <Ionicons
                 name="scan-outline"
@@ -131,6 +141,7 @@ export default function LoginScreen({ navigation }) {
             </View>
 
             {/* NOMBRE */}
+
             <Text style={s.brand}>
               Estacionamiento{"\n"}Inteligente
             </Text>
@@ -138,37 +149,6 @@ export default function LoginScreen({ navigation }) {
             <Text style={s.tag}>
               Inicia sesión para continuar
             </Text>
-
-            {/* ONDAS DEL ENCABEZADO */}
-            <View style={s.heroWave}>
-              <Svg
-                width="100%"
-                height="100%"
-                viewBox="0 0 400 90"
-                preserveAspectRatio="none"
-              >
-                <Path
-                  d="
-                    M0 25
-                    C110 85 260 -10 400 45
-                    L400 90
-                    L0 90 Z
-                  "
-                  fill="#B9DBFF"
-                  opacity={0.55}
-                />
-
-                <Path
-                  d="
-                    M0 50
-                    C130 5 270 95 400 35
-                    L400 90
-                    L0 90 Z
-                  "
-                  fill="#EAF4FF"
-                />
-              </Svg>
-            </View>
           </LinearGradient>
 
           {/* ==================================
@@ -177,6 +157,7 @@ export default function LoginScreen({ navigation }) {
 
           <View style={s.card}>
             {/* LÍNEA DECORATIVA */}
+
             <LinearGradient
               colors={[
                 "#0754BD",
@@ -197,6 +178,7 @@ export default function LoginScreen({ navigation }) {
             </Text>
 
             {/* CORREO ELECTRÓNICO */}
+
             <Text style={s.label}>
               Correo electrónico
             </Text>
@@ -224,6 +206,7 @@ export default function LoginScreen({ navigation }) {
             </View>
 
             {/* CONTRASEÑA */}
+
             <Text style={s.label}>
               Contraseña
             </Text>
@@ -265,6 +248,7 @@ export default function LoginScreen({ navigation }) {
             </View>
 
             {/* RECUPERAR CONTRASEÑA */}
+
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate("ForgotPassword")
@@ -277,6 +261,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* BOTÓN DE INICIAR SESIÓN */}
+
             <TouchableOpacity
               onPress={login}
               disabled={loading}
@@ -311,6 +296,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* REGISTRO */}
+
             <View style={s.register}>
               <Text style={s.registerText}>
                 ¿No tienes una cuenta?{" "}
@@ -394,10 +380,9 @@ const s = StyleSheet.create({
   },
 
   scroll: {
-  flexGrow: 1,
-  paddingBottom: 0,
-  justifyContent: "space-between"
-},
+    flexGrow: 1,
+    paddingBottom: 0
+  },
 
   // ENCABEZADO
 
@@ -405,7 +390,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     paddingTop: 42,
     paddingHorizontal: 25,
-    paddingBottom: 100,
+    paddingBottom: 85,
     overflow: "hidden",
     position: "relative"
   },
@@ -464,13 +449,6 @@ const s = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     fontWeight: "500"
-  },
-
-  heroWave: {
-    position: "absolute",
-    bottom: -1,
-    width: "100%",
-    height: 75
   },
 
   // TARJETA
@@ -641,10 +619,11 @@ const s = StyleSheet.create({
   // ONDAS INFERIORES
 
   bottomDecoration: {
-  height: 115,
-  marginTop: 20,
-  width: "100%",
-  justifyContent: "flex-end",
-  flexShrink: 0
-}
+    height: 115,
+    marginTop: "auto",
+    paddingTop: 20,
+    width: "100%",
+    justifyContent: "flex-end",
+    flexShrink: 0
+  }
 });
