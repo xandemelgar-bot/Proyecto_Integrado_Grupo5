@@ -394,9 +394,10 @@ const s = StyleSheet.create({
   },
 
   scroll: {
-    flexGrow: 1,
-    paddingBottom: 0
-  },
+  flexGrow: 1,
+  paddingBottom: 0,
+  justifyContent: "space-between"
+},
 
   // ENCABEZADO
 
@@ -640,9 +641,10 @@ const s = StyleSheet.create({
   // ONDAS INFERIORES
 
   bottomDecoration: {
-    height: 115,
-    marginTop: 20,
-    width: "100%",
-    justifyContent: "flex-end"
-  }
+  height: 115,
+  marginTop: 20,
+  width: "100%",
+  justifyContent: "flex-end",
+  flexShrink: 0
+}
 });
