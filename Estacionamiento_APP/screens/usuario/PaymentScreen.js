@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 import {
   Screen, Card, Heading, Muted, Button, money
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
 
 export default function PaymentScreen({ navigation, route }) {
   const { reservations, payments, pay } = useParking();

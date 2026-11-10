@@ -5,7 +5,7 @@ import {
 import {
   Screen, Card, Heading, Muted, Button, money
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
 import C from "../../constants/colors";
 
 export default function TariffsScreen({ navigation }) {

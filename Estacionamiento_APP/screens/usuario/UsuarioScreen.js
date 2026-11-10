@@ -3,7 +3,7 @@ import { View } from "react-native";
 import {
   Screen, Card, Heading, Metric, Muted, Button
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
 
 export default function UsuarioScreen({ navigation }) {
   const { stats, reservations } = useParking();

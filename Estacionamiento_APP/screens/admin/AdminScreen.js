@@ -3,7 +3,9 @@ import { View } from "react-native";
 import {
   Screen, Card, Heading, Metric, Muted, Button, money
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
+import { Alert } from "react-native";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function AdminScreen({ navigation }) {
   const { stats, connection, reservations } = useParking();
@@ -15,6 +17,34 @@ export default function AdminScreen({ navigation }) {
     ["Reportes", "Reports"],
     ["Predicciones IA", "Predictions"]
   ];
+  const { cerrarSesion } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Cerrar sesión",
+      "¿Estás seguro de que deseas cerrar sesión?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Cerrar sesión",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await cerrarSesion();
+            } catch (error) {
+              Alert.alert(
+                "Error",
+                "No se pudo cerrar sesión."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <Screen
@@ -69,6 +99,15 @@ export default function AdminScreen({ navigation }) {
           />
         ))}
       </Card>
+      <Card>
+        <Button
+          title="Cerrar sesión"
+          icon="log-out-outline"
+          danger
+          onPress={handleLogout}
+        />
+      </Card>
     </Screen>
+
   );
 }

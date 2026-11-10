@@ -2,7 +2,7 @@ import React from "react";
 import {
   Screen, Card, Heading, Muted, dateText
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
 
 export default function NotificationsScreen({ navigation }) {
   const { notifications, reservations } = useParking();

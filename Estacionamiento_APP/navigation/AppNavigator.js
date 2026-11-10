@@ -16,13 +16,13 @@ import { useAuth } from "../contexts/AuthContext";
 // Navegación del administrador
 import AdminNavigator from "./AdminNavigator";
 
+// Navegación del conductor
+import UserNavigator from "./UserNavigator";
+
 // Pantallas de autenticación
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
-
-// Pantalla temporal del usuario
-import UsuarioScreen from "../screens/usuario/UsuarioTemporalScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -37,6 +37,7 @@ export default function AppNavigator() {
     cerrarSesion,
   } = useAuth();
 
+  // CARGANDO APLICACIÓN
   if (loading) {
     return (
       <View style={styles.center}>
@@ -52,6 +53,7 @@ export default function AppNavigator() {
     );
   }
 
+  // ERROR AL CARGAR PERFIL
   if (usuario && (!perfil || errorPerfil)) {
     return (
       <View style={styles.center}>
@@ -72,9 +74,13 @@ export default function AppNavigator() {
     );
   }
 
+  // NAVEGACIÓN SEGÚN ROL
   return (
     <Stack.Navigator
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        animation: "fade",
+      }}
     >
       {!usuario ? (
         <>
@@ -101,7 +107,7 @@ export default function AppNavigator() {
       ) : (
         <Stack.Screen
           name="Usuario"
-          component={UsuarioScreen}
+          component={UserNavigator}
         />
       )}
     </Stack.Navigator>
@@ -113,14 +119,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#F4F7FB",
     padding: 25,
     gap: 15,
   },
 
   text: {
     fontSize: 16,
-    color: "#334155",
+    color: "#1E293B",
     textAlign: "center",
   },
 });

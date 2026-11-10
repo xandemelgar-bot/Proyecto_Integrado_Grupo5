@@ -4,7 +4,7 @@ import {
   Screen, Card, Heading, Muted, Status,
   Button, dateText, money
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
 
 export default function ReservationsAdminScreen({ navigation }) {
   const { reservations, cancelReservation } = useParking();

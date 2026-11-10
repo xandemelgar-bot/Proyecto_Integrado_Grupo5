@@ -3,7 +3,7 @@ import { View, Text } from "react-native";
 import {
   Screen, Card, Heading, Muted, money
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
 import C from "../../constants/colors";
 
 function Bar({ label, value, max, color = C.primary }) {

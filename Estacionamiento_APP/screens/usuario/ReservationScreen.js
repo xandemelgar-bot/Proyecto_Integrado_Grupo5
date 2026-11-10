@@ -3,7 +3,7 @@ import { Text, Alert, View, TouchableOpacity } from "react-native";
 import {
   Screen, Card, Heading, Muted, Button, money
 } from "../../components/UI";
-import { useParking } from "../../context/ParkingContext";
+import { useParking } from "../../contexts/ParkingContext";
 import C from "../../constants/colors";
 
 export default function ReservationScreen({ navigation, route }) {
@@ -17,6 +17,7 @@ export default function ReservationScreen({ navigation, route }) {
   const free = spaces.filter(s => s.estado === "libre");
   const selected = spaces.find(s => s.id === spaceId);
 
+
   const submit = () => {
     if (!spaceId) {
       return Alert.alert(
@@ -28,18 +29,25 @@ export default function ReservationScreen({ navigation, route }) {
     const result = reserve(spaceId, hours);
 
     if (!result.ok) {
-      return Alert.alert("No disponible", result.message);
+      return Alert.alert(
+        "No disponible",
+        result.message
+      );
     }
 
     Alert.alert(
       "Reserva creada",
-      Espacio ${spaceId} por ${hours} hora(s),
-      [{
-        text: "Ver reservas",
-        onPress: () => navigation.navigate("MyReservations")
-      }]
+      `Espacio ${spaceId} por ${hours} hora(s)`,
+      [
+        {
+          text: "Ver reservas",
+          onPress: () =>
+            navigation.navigate("MyReservations"),
+        },
+      ]
     );
   };
+
 
   return (
     <Screen
@@ -50,11 +58,13 @@ export default function ReservationScreen({ navigation, route }) {
       <Card>
         <Heading>Seleccionar espacio</Heading>
 
+
         <Muted>
           {selected
-            ? Seleccionado: ${selected.id} (nivel ${selected.nivel})
+            ? `Seleccionado: ${selected.id} (nivel ${selected.nivel})`
             : "Selecciona uno de los disponibles"}
         </Muted>
+
 
         {free.length === 0 && (
           <Muted>No hay espacios libres.</Muted>
