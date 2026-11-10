@@ -9,14 +9,26 @@ import React, {
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
+  sendPasswordResetEmail,
+  deleteUser,
 } from "firebase/auth";
 
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
 import { auth, db } from "../services/firebase";
 
-// Crear el contexto
+// ==========================================
+// CONTEXTO DE AUTENTICACIÓN
+// ==========================================
+
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -25,7 +37,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [errorPerfil, setErrorPerfil] = useState(null);
 
-  // Detectar cambios en la sesión de Firebase
+  // ==========================================
+  // DETECTAR SESIÓN DE FIREBASE
+  // ==========================================
+
   useEffect(() => {
     let activo = true;
 
@@ -93,7 +108,10 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Iniciar sesión
+  // ==========================================
+  // INICIAR SESIÓN
+  // ==========================================
+
   const iniciarSesion = async (correo, contrasena) => {
     const resultado = await signInWithEmailAndPassword(
       auth,
@@ -104,12 +122,141 @@ export function AuthProvider({ children }) {
     return resultado.user;
   };
 
-  // Cerrar sesión
+  // ==========================================
+  // REGISTRAR NUEVO USUARIO
+  // ==========================================
+
+  const registrarUsuario = async (
+    correo,
+    contrasena,
+    nombre
+  ) => {
+    const correoLimpio = correo.trim().toLowerCase();
+    const nombreLimpio = nombre.trim();
+
+    if (!nombreLimpio || !correoLimpio || !contrasena) {
+      throw new Error("Completa todos los campos.");
+    }
+
+    if (contrasena.length < 6) {
+      throw new Error(
+        "La contraseña debe tener al menos 6 caracteres."
+      );
+    }
+
+    let nuevoUsuario = null;
+
+    try {
+      // Crear cuenta en Firebase Authentication
+      const resultado = await createUserWithEmailAndPassword(
+        auth,
+        correoLimpio,
+        contrasena
+      );
+
+      nuevoUsuario = resultado.user;
+
+      // Guardar perfil en Firestore
+      const nuevoPerfil = {
+        nombre: nombreLimpio,
+        correo: correoLimpio,
+        rol: "usuario",
+        estado: "activo",
+        fechaCreacion: serverTimestamp(),
+      };
+
+      await setDoc(
+        doc(db, "usuarios", nuevoUsuario.uid),
+        nuevoPerfil
+      );
+
+      // Actualizar nombre visible
+      try {
+        await updateProfile(nuevoUsuario, {
+          displayName: nombreLimpio,
+        });
+      } catch (error) {
+        console.log(
+          "No se pudo actualizar el nombre visible:",
+          error.code
+        );
+      }
+
+      // Actualizar estado local
+      setUsuario(nuevoUsuario);
+      setPerfil({
+        id: nuevoUsuario.uid,
+        nombre: nombreLimpio,
+        correo: correoLimpio,
+        rol: "usuario",
+        estado: "activo",
+      });
+
+      setErrorPerfil(null);
+      setLoading(false);
+
+      return nuevoUsuario;
+
+    } catch (error) {
+      console.log(
+        "Error al registrar usuario:",
+        error.code,
+        error.message
+      );
+
+      // Si Authentication creó la cuenta pero
+      // Firestore falló, intentar revertir el registro.
+      if (nuevoUsuario) {
+        try {
+          await deleteUser(nuevoUsuario);
+        } catch (rollbackError) {
+          console.log(
+            "No se pudo revertir el registro:",
+            rollbackError.code
+          );
+
+          // Evitar dejar una sesión activa sin perfil.
+          try {
+            await signOut(auth);
+          } catch (_) {}
+        }
+      }
+
+      throw error;
+    }
+  };
+
+  // ==========================================
+  // RESTABLECER CONTRASEÑA
+  // ==========================================
+
+  const restablecerContrasena = async (correo) => {
+    const correoLimpio = correo.trim().toLowerCase();
+
+    if (!correoLimpio) {
+      throw new Error(
+        "Ingresa tu correo electrónico."
+      );
+    }
+
+    await sendPasswordResetEmail(
+      auth,
+      correoLimpio
+    );
+  };
+
+  // ==========================================
+  // CERRAR SESIÓN
+  // ==========================================
+
   const cerrarSesion = async () => {
     await signOut(auth);
   };
 
-  // Volver a cargar el perfil
+  // ==========================================
+  // RECARGAR PERFIL
+  // ==========================================
+
   const recargarPerfil = async () => {
     if (!auth.currentUser) return;
 
@@ -146,7 +293,15 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ==========================================
+  // IDENTIFICAR ADMINISTRADOR
+  // ==========================================
+
   const esAdmin = perfil?.rol === "admin";
+
+  // ==========================================
+  // COMPARTIR FUNCIONES
+  // ==========================================
 
   return (
     <AuthContext.Provider
@@ -157,6 +312,8 @@ export function AuthProvider({ children }) {
         errorPerfil,
         esAdmin,
         iniciarSesion,
+        registrarUsuario,
+        restablecerContrasena,
         cerrarSesion,
         recargarPerfil,
       }}
@@ -166,7 +323,10 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Hook para acceder fácilmente al contexto
+// ==========================================
+// HOOK useAuth
+// ==========================================
+
 export function useAuth() {
   const contexto = useContext(AuthContext);
 
