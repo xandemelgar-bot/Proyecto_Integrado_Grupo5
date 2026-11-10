@@ -1,20 +1,37 @@
+
 import React, { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView,
-  Alert, ActivityIndicator, StyleSheet, StatusBar
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  StyleSheet,
+  StatusBar
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Path } from "react-native-svg";
+
 import { useAuth } from "../../hooks/useAuth";
-import C from "../../constants/colors";
 
 export default function LoginScreen({ navigation }) {
   const { iniciarSesion } = useAuth();
+
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // ==========================================
+  // LÓGICA ORIGINAL
+  // ==========================================
 
   const login = async () => {
     if (!correo.trim() || !contrasena) {
@@ -26,7 +43,11 @@ export default function LoginScreen({ navigation }) {
 
     try {
       setLoading(true);
-      await iniciarSesion(correo.trim().toLowerCase(), contrasena);
+
+      await iniciarSesion(
+        correo.trim().toLowerCase(),
+        contrasena
+      );
     } catch (e) {
       Alert.alert(
         "No se pudo iniciar sesión",
@@ -40,113 +61,294 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={s.safe} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={s.safe}
+      edges={["top", "bottom"]}
+    >
       <StatusBar
         barStyle="light-content"
-        backgroundColor={C.primary}
+        backgroundColor="#0754BD"
       />
+
       <KeyboardAvoidingView
         style={s.main}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={
+          Platform.OS === "ios" ? "padding" : undefined
+        }
       >
         <ScrollView
-          keyboardShouldPersistTaps="handled"
+          style={s.scrollView}
           contentContainerStyle={s.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={s.hero}>
-            <Ionicons name="car-sport" size={52} color="white" />
+          {/* FONDO GENERAL */}
+
+          <LinearGradient
+            colors={[
+              "#EAF4FF",
+              "#F8FBFF",
+              "#D5E9FF"
+            ]}
+            locations={[0, 0.55, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          {/* ==================================
+              ENCABEZADO
+          ================================== */}
+
+          <LinearGradient
+            colors={[
+              "#0754BD",
+              "#1673E8",
+              "#67B1FF"
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.hero}
+          >
+            <View style={s.circleOne} />
+            <View style={s.circleTwo} />
+
+            <View style={s.logoContainer}>
+              <Ionicons
+                name="scan-outline"
+                size={76}
+                color="#FFFFFF"
+                style={s.scanIcon}
+              />
+
+              <Ionicons
+                name="car-sport"
+                size={43}
+                color="#FFFFFF"
+                style={s.carIcon}
+              />
+            </View>
+
             <Text style={s.brand}>
               Estacionamiento{"\n"}Inteligente
             </Text>
+
             <Text style={s.tag}>
-              Gestiona tu estacionamiento de forma fácil y segura
+              Inicia sesión para continuar
             </Text>
+          </LinearGradient>
+
+          {/* ==================================
+              CONTENEDOR DEL FORMULARIO
+          ================================== */}
+
+          <View style={s.formContainer}>
+            <View style={s.card}>
+              {/* LÍNEA SUPERIOR */}
+
+              <LinearGradient
+                colors={[
+                  "#0754BD",
+                  "#2585FF",
+                  "#8BC5FF"
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={s.cardAccent}
+              />
+
+              {/* TÍTULO */}
+
+              <Text style={s.title}>
+                ¡Bienvenido!
+              </Text>
+
+              <Text style={s.subtitle}>
+                Ingresa tus datos para continuar
+              </Text>
+
+              {/* CORREO */}
+
+              <Text style={s.label}>
+                Correo electrónico
+              </Text>
+
+              <View style={s.field}>
+                <View style={s.fieldIcon}>
+                  <Ionicons
+                    name="mail-outline"
+                    size={21}
+                    color="#1673E8"
+                  />
+                </View>
+
+                <TextInput
+                  style={s.input}
+                  value={correo}
+                  onChangeText={setCorreo}
+                  placeholder="ejemplo@correo.com"
+                  placeholderTextColor="#91A5C0"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  editable={!loading}
+                />
+              </View>
+
+              {/* CONTRASEÑA */}
+
+              <Text style={s.label}>
+                Contraseña
+              </Text>
+
+              <View style={s.field}>
+                <View style={s.fieldIcon}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={21}
+                    color="#1673E8"
+                  />
+                </View>
+
+                <TextInput
+                  style={s.input}
+                  value={contrasena}
+                  onChangeText={setContrasena}
+                  placeholder="Ingresa tu contraseña"
+                  placeholderTextColor="#91A5C0"
+                  secureTextEntry={!visible}
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+
+                <TouchableOpacity
+                  onPress={() => setVisible(!visible)}
+                  style={s.eyeButton}
+                >
+                  <Ionicons
+                    name={
+                      visible
+                        ? "eye-off-outline"
+                        : "eye-outline"
+                    }
+                    size={21}
+                    color="#7A9BC7"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* RECUPERAR CONTRASEÑA */}
+
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("ForgotPassword")
+                }
+                style={s.forgotButton}
+              >
+                <Text style={s.link}>
+                  ¿Olvidaste tu contraseña?
+                </Text>
+              </TouchableOpacity>
+
+              {/* BOTÓN PRINCIPAL */}
+
+              <TouchableOpacity
+                onPress={login}
+                disabled={loading}
+                activeOpacity={0.85}
+                style={s.buttonWrapper}
+              >
+                <LinearGradient
+                  colors={[
+                    "#2585FF",
+                    "#0754C9"
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.button}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <View style={s.buttonContent}>
+                      <Ionicons
+                        name="log-in-outline"
+                        size={23}
+                        color="#FFFFFF"
+                      />
+
+                      <Text style={s.buttonText}>
+                        Iniciar sesión
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* REGISTRO */}
+
+              <View style={s.register}>
+                <Text style={s.registerText}>
+                  ¿No tienes una cuenta?{" "}
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("Register")
+                  }
+                >
+                  <Text style={s.registerLink}>
+                    Regístrate
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
 
-          <View style={s.card}>
-            <Text style={s.title}>¡Bienvenido!</Text>
-            <Text style={s.subtitle}>
-              Ingresa tus datos para continuar
-            </Text>
+          {/* ==================================
+              ONDAS INFERIORES
+          ================================== */}
 
-            <Text style={s.label}>Correo electrónico</Text>
-            <View style={s.field}>
-              <Ionicons
-                name="mail-outline"
-                size={21}
-                color={C.textSecondary}
-              />
-              <TextInput
-                style={s.input}
-                value={correo}
-                onChangeText={setCorreo}
-                placeholder="ejemplo@correo.com"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                editable={!loading}
-              />
-            </View>
-
-            <Text style={s.label}>Contraseña</Text>
-            <View style={s.field}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={21}
-                color={C.textSecondary}
-              />
-              <TextInput
-                style={s.input}
-                value={contrasena}
-                onChangeText={setContrasena}
-                placeholder="Ingresa tu contraseña"
-                secureTextEntry={!visible}
-                autoCapitalize="none"
-                editable={!loading}
-              />
-              <TouchableOpacity onPress={() => setVisible(!visible)}>
-                <Ionicons
-                  name={visible ? "eye-off-outline" : "eye-outline"}
-                  size={21}
-                  color={C.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ForgotPassword")}
+          <View
+            style={s.bottomDecoration}
+            pointerEvents="none"
+          >
+            <Svg
+              width="100%"
+              height="100%"
+              viewBox="0 0 400 120"
+              preserveAspectRatio="none"
             >
-              <Text style={s.link}>
-                ¿Olvidaste tu contraseña?
-              </Text>
-            </TouchableOpacity>
+              <Path
+                d="
+                  M0 45
+                  C110 -5 230 105 400 25
+                  L400 120
+                  L0 120 Z
+                "
+                fill="#8BC5FF"
+                opacity={0.45}
+              />
 
-            <TouchableOpacity
-              style={s.button}
-              onPress={login}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={s.buttonText}>
-                  Iniciar sesión →
-                </Text>
-              )}
-            </TouchableOpacity>
+              <Path
+                d="
+                  M0 85
+                  C130 25 270 135 400 55
+                  L400 120
+                  L0 120 Z
+                "
+                fill="#2585FF"
+                opacity={0.8}
+              />
 
-            <View style={s.register}>
-              <Text style={{ color: C.textSecondary }}>
-                ¿No tienes una cuenta?{" "}
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("Register")}
-              >
-                <Text style={{ color: C.primary, fontWeight: "800" }}>
-                  Regístrate
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <Path
+                d="
+                  M0 110
+                  C150 55 260 150 400 80
+                  L400 120
+                  L0 120 Z
+                "
+                fill="#0754C9"
+              />
+            </Svg>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -154,101 +356,292 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
+// ==========================================
+// ESTILOS
+// ==========================================
+
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.background },
-  main: { flex: 1, backgroundColor: C.background },
-  scroll: { flexGrow: 1, paddingBottom: 28 },
-  hero: {
-    backgroundColor: C.primary,
-    alignItems: "center",
-    paddingTop: 28,
-    paddingHorizontal: 25,
-    paddingBottom: 78,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28
+  safe: {
+    flex: 1,
+    backgroundColor: "#0754BD"
   },
+
+  main: {
+    flex: 1,
+    backgroundColor: "#EAF4FF"
+  },
+
+  scrollView: {
+    flex: 1
+  },
+
+  scroll: {
+    flexGrow: 1,
+    paddingBottom: 0
+  },
+
+  // ==========================================
+  // ENCABEZADO
+  // ==========================================
+
+  hero: {
+    alignItems: "center",
+    paddingTop: 24,
+    paddingHorizontal: 25,
+    paddingBottom: 30,
+    overflow: "hidden",
+    position: "relative",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24
+  },
+
+  circleOne: {
+    position: "absolute",
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: "rgba(255,255,255,0.09)",
+    top: -110,
+    right: -90
+  },
+
+  circleTwo: {
+    position: "absolute",
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    left: -90,
+    top: 80
+  },
+
+  logoContainer: {
+    width: 88,
+    height: 88,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    marginBottom: 10
+  },
+
+  scanIcon: {
+    position: "absolute"
+  },
+
+  carIcon: {
+    position: "absolute"
+  },
+
   brand: {
     fontSize: 27,
-    fontWeight: "800",
-    color: "white",
+    fontWeight: "900",
+    color: "#FFFFFF",
     textAlign: "center",
-    marginTop: 10
+    lineHeight: 34,
+    letterSpacing: -0.5
   },
+
   tag: {
-    color: "#DBEAFE",
+    color: "#EAF4FF",
     textAlign: "center",
     marginTop: 9,
-    fontSize: 13
+    fontSize: 13,
+    fontWeight: "500"
   },
+
+  // ==========================================
+  // CONTENEDOR DEL FORMULARIO
+  // ==========================================
+
+  formContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingTop: 24,
+    paddingBottom: 20
+  },
+
+  // ==========================================
+  // TARJETA
+  // ==========================================
+
   card: {
-    backgroundColor: "white",
-    borderRadius: 22,
-    marginHorizontal: 18,
-    marginTop: -45,
-    padding: 22,
-    elevation: 5,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 25,
+    marginHorizontal: 20,
+    paddingHorizontal: 22,
+    paddingTop: 28,
+    paddingBottom: 26,
+
+    elevation: 9,
+
+    shadowColor: "#0754BD",
+    shadowOffset: {
+      width: 0,
+      height: 8
+    },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+
     borderWidth: 1,
-    borderColor: C.border
+    borderColor: "#E2EEFC",
+    overflow: "hidden"
   },
+
+  cardAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5
+  },
+
   title: {
-    fontSize: 25,
-    fontWeight: "800",
+    fontSize: 26,
+    fontWeight: "900",
     textAlign: "center",
-    color: C.text
+    color: "#102A55"
   },
+
   subtitle: {
     textAlign: "center",
-    color: C.textSecondary,
-    marginTop: 7,
-    marginBottom: 26
+    color: "#64748B",
+    fontSize: 13,
+    marginTop: 8,
+    marginBottom: 24
   },
+
+  // ==========================================
+  // CAMPOS
+  // ==========================================
+
   label: {
-    color: C.text,
-    fontWeight: "600",
-    marginBottom: 8
+    color: "#24436C",
+    fontWeight: "700",
+    fontSize: 13,
+    marginBottom: 9,
+    marginLeft: 3
   },
+
   field: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: C.background,
+    gap: 11,
+
+    backgroundColor: "#F5F9FF",
+
     borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    marginBottom: 19,
+    borderColor: "#D6E5F8",
+    borderRadius: 14,
+
+    paddingHorizontal: 12,
+    marginBottom: 18,
     minHeight: 54
   },
-  input: {
-    flex: 1,
-    minWidth: 0,
-    color: C.text,
-    fontSize: 14,
-    paddingVertical: 12
-  },
-  link: {
-    textAlign: "center",
-    color: C.primary,
-    fontWeight: "700",
-    marginBottom: 18
-  },
-  button: {
-    backgroundColor: C.primary,
-    borderRadius: 12,
-    minHeight: 53,
+
+  fieldIcon: {
+    width: 31,
+    height: 34,
     justifyContent: "center",
     alignItems: "center"
   },
+
+  input: {
+    flex: 1,
+    minWidth: 0,
+    color: "#102A55",
+    fontSize: 14,
+    paddingVertical: 12
+  },
+
+  eyeButton: {
+    padding: 5
+  },
+
+  // ==========================================
+  // RECUPERACIÓN
+  // ==========================================
+
+  forgotButton: {
+    alignSelf: "flex-end",
+    marginBottom: 22
+  },
+
+  link: {
+    color: "#1165D8",
+    fontWeight: "700",
+    fontSize: 13
+  },
+
+  // ==========================================
+  // BOTÓN PRINCIPAL
+  // ==========================================
+
+  buttonWrapper: {
+    borderRadius: 14,
+    overflow: "hidden",
+
+    elevation: 5,
+
+    shadowColor: "#0754BD",
+    shadowOffset: {
+      width: 0,
+      height: 5
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 9
+  },
+
+  button: {
+    minHeight: 56,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 14
+  },
+
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10
+  },
+
   buttonText: {
-    color: "white",
+    color: "#FFFFFF",
     fontWeight: "800",
     fontSize: 16
   },
+
+  // ==========================================
+  // REGISTRO
+  // ==========================================
+
   register: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 24
+  },
+
+  registerText: {
+    color: "#64748B",
+    fontSize: 13
+  },
+
+  registerLink: {
+    color: "#1165D8",
+    fontWeight: "800",
+    fontSize: 13
+  },
+
+  // ==========================================
+  // ONDAS INFERIORES
+  // ==========================================
+
+  bottomDecoration: {
+    height: 115,
+    width: "100%",
+    justifyContent: "flex-end",
+    flexShrink: 0
   }
 });
