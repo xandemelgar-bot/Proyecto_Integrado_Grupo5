@@ -1,463 +1,254 @@
-
-import { SafeAreaView } from "react-native-safe-area-context";
-import * as NavigationBar from "expo-navigation-bar";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-  StatusBar,
+  View, Text, TextInput, TouchableOpacity,
+  KeyboardAvoidingView, Platform, ScrollView,
+  Alert, ActivityIndicator, StyleSheet, StatusBar
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../hooks/useAuth";
-import COLORS from "../../constants/colors";
+import C from "../../constants/colors";
 
 export default function LoginScreen({ navigation }) {
   const { iniciarSesion } = useAuth();
-  const insets = useSafeAreaInsets();
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
-  const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [campoActivo, setCampoActivo] = useState(null);
 
-  const handleLogin = async () => {
-    const correoLimpio = correo.trim().toLowerCase();
-
-    if (!correoLimpio || !contrasena) {
-      Alert.alert(
+  const login = async () => {
+    if (!correo.trim() || !contrasena) {
+      return Alert.alert(
         "Campos incompletos",
-        "Ingresa tu correo electrónico y contraseña."
+        "Ingresa correo y contraseña"
       );
-      return;
     }
 
     try {
       setLoading(true);
-
-      await iniciarSesion(correoLimpio, contrasena);
-
-      // AuthContext detecta la sesión automáticamente.
-
-    } catch (error) {
-      console.log("Error al iniciar sesión:", error.code);
-
-      let mensaje = "No se pudo iniciar sesión.";
-
-      switch (error.code) {
-        case "auth/invalid-credential":
-        case "auth/wrong-password":
-        case "auth/user-not-found":
-          mensaje = "Correo o contraseña incorrectos.";
-          break;
-
-        case "auth/invalid-email":
-          mensaje = "El correo electrónico no es válido.";
-          break;
-
-        case "auth/network-request-failed":
-          mensaje = "Verifica tu conexión a Internet.";
-          break;
-
-        case "auth/too-many-requests":
-          mensaje = "Demasiados intentos. Inténtalo más tarde.";
-          break;
-
-        default:
-          mensaje = "Ocurrió un error. Inténtalo nuevamente.";
-      }
-
-      Alert.alert("Error de inicio de sesión", mensaje);
-
+      await iniciarSesion(correo.trim().toLowerCase(), contrasena);
+    } catch (e) {
+      Alert.alert(
+        "No se pudo iniciar sesión",
+        e.code === "auth/network-request-failed"
+          ? "Verifica tu conexión a Internet."
+          : "Revisa tus credenciales e inténtalo nuevamente."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={["top"]}
-    >
+    <SafeAreaView style={s.safe} edges={["top", "bottom"]}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor={COLORS.primary}
+        backgroundColor={C.primary}
       />
-
       <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={s.main}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.scroll}
         >
-          {/* ENCABEZADO */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <MaterialCommunityIcons
-                name="car-multiple"
-                size={42}
-                color="#FFFFFF"
-              />
-            </View>
-
-            <Text style={styles.headerTitle}>
-              Estacionamiento
+          <View style={s.hero}>
+            <Ionicons name="car-sport" size={52} color="white" />
+            <Text style={s.brand}>
+              Estacionamiento{"\n"}Inteligente
             </Text>
-
-            <Text style={styles.headerTitleBold}>
-              Inteligente
-            </Text>
-
-            <Text style={styles.headerSubtitle}>
+            <Text style={s.tag}>
               Gestiona tu estacionamiento de forma fácil y segura
             </Text>
           </View>
 
-          {/* TARJETA */}
-          <View style={styles.card}>
-            <View style={styles.welcomeContainer}>
-              <Text style={styles.welcomeTitle}>
-                ¡Bienvenido!
-              </Text>
-
-              <Text style={styles.welcomeSubtitle}>
-                Ingresa tus datos para continuar
-              </Text>
-            </View>
-
-            {/* CORREO */}
-            <Text style={styles.label}>
-              Correo electrónico
+          <View style={s.card}>
+            <Text style={s.title}>¡Bienvenido!</Text>
+            <Text style={s.subtitle}>
+              Ingresa tus datos para continuar
             </Text>
 
-            <View
-              style={[
-                styles.inputContainer,
-                campoActivo === "correo" && styles.inputFocused,
-              ]}
-            >
+            <Text style={s.label}>Correo electrónico</Text>
+            <View style={s.field}>
               <Ionicons
                 name="mail-outline"
                 size={21}
-                color={
-                  campoActivo === "correo"
-                    ? COLORS.primary
-                    : COLORS.textSecondary
-                }
+                color={C.textSecondary}
               />
-
               <TextInput
-                style={styles.input}
-                placeholder="ejemplo@correo.com"
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
+                style={s.input}
                 value={correo}
                 onChangeText={setCorreo}
-                onFocus={() => setCampoActivo("correo")}
-                onBlur={() => setCampoActivo(null)}
+                placeholder="ejemplo@correo.com"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
                 editable={!loading}
-                returnKeyType="next"
               />
             </View>
 
-            {/* CONTRASEÑA */}
-            <Text style={styles.label}>
-              Contraseña
-            </Text>
-
-            <View
-              style={[
-                styles.inputContainer,
-                campoActivo === "contrasena" && styles.inputFocused,
-              ]}
-            >
+            <Text style={s.label}>Contraseña</Text>
+            <View style={s.field}>
               <Ionicons
                 name="lock-closed-outline"
                 size={21}
-                color={
-                  campoActivo === "contrasena"
-                    ? COLORS.primary
-                    : COLORS.textSecondary
-                }
+                color={C.textSecondary}
               />
-
               <TextInput
-                style={styles.input}
-                placeholder="Ingresa tu contraseña"
-                placeholderTextColor="#94A3B8"
-                secureTextEntry={!mostrarContrasena}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="password"
+                style={s.input}
                 value={contrasena}
                 onChangeText={setContrasena}
-                onFocus={() => setCampoActivo("contrasena")}
-                onBlur={() => setCampoActivo(null)}
+                placeholder="Ingresa tu contraseña"
+                secureTextEntry={!visible}
+                autoCapitalize="none"
                 editable={!loading}
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
               />
-
-              <TouchableOpacity
-                onPress={() =>
-                  setMostrarContrasena(!mostrarContrasena)
-                }
-                disabled={loading}
-                accessibilityLabel={
-                  mostrarContrasena
-                    ? "Ocultar contraseña"
-                    : "Mostrar contraseña"
-                }
-              >
+              <TouchableOpacity onPress={() => setVisible(!visible)}>
                 <Ionicons
-                  name={
-                    mostrarContrasena
-                      ? "eye-off-outline"
-                      : "eye-outline"
-                  }
-                  size={22}
-                  color={COLORS.textSecondary}
+                  name={visible ? "eye-off-outline" : "eye-outline"}
+                  size={21}
+                  color={C.textSecondary}
                 />
               </TouchableOpacity>
             </View>
 
-            {/* RECUPERAR CONTRASEÑA */}
             <TouchableOpacity
-              style={styles.forgotButton}
-              onPress={() =>
-                navigation.navigate("ForgotPassword")
-              }
-              disabled={loading}
+              onPress={() => navigation.navigate("ForgotPassword")}
             >
-              <Text style={styles.forgotText}>
+              <Text style={s.link}>
                 ¿Olvidaste tu contraseña?
               </Text>
             </TouchableOpacity>
 
-
-            {/* BOTÓN INICIAR SESIÓN */}
             <TouchableOpacity
-              style={[
-                styles.loginButton,
-                loading && styles.buttonDisabled,
-              ]}
-              onPress={handleLogin}
+              style={s.button}
+              onPress={login}
               disabled={loading}
-              activeOpacity={0.8}
             >
               {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="white" />
               ) : (
-                <View style={styles.buttonContent}>
-                  <Text style={styles.loginButtonText}>
-                    Iniciar sesión
-                  </Text>
-
-                  <Ionicons
-                    name="arrow-forward"
-                    size={20}
-                    color="#FFFFFF"
-                  />
-                </View>
+                <Text style={s.buttonText}>
+                  Iniciar sesión →
+                </Text>
               )}
             </TouchableOpacity>
 
-            {/* REGISTRO */}
-            <View style={styles.registerContainer}>
-              <Text style={styles.registerQuestion}>
-                ¿No tienes una cuenta?
+            <View style={s.register}>
+              <Text style={{ color: C.textSecondary }}>
+                ¿No tienes una cuenta?{" "}
               </Text>
-
               <TouchableOpacity
                 onPress={() => navigation.navigate("Register")}
-                disabled={loading}
-                style={styles.registerButton}
               >
-                <Text style={styles.registerLink}>
+                <Text style={{ color: C.primary, fontWeight: "800" }}>
                   Regístrate
                 </Text>
               </TouchableOpacity>
             </View>
-
-          </View>
-
-          {/* PIE DE PÁGINA */}
-          <View style={styles.footer}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={16}
-              color={COLORS.textSecondary}
-            />
-
-            <Text style={styles.footerText}>
-              Acceso seguro a tu estacionamiento
-            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-
 }
 
-const styles = StyleSheet.create({
-
-
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-  },
-
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 35,
-    backgroundColor: COLORS.background,
-  },
-
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingTop: 30,
-    paddingBottom: 85,
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: C.background },
+  main: { flex: 1, backgroundColor: C.background },
+  scroll: { flexGrow: 1, paddingBottom: 28 },
+  hero: {
+    backgroundColor: C.primary,
+    alignItems: "center",
+    paddingTop: 28,
     paddingHorizontal: 25,
-    alignItems: "center",
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingBottom: 78,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28
   },
-
+  brand: {
+    fontSize: 27,
+    fontWeight: "800",
+    color: "white",
+    textAlign: "center",
+    marginTop: 10
+  },
+  tag: {
+    color: "#DBEAFE",
+    textAlign: "center",
+    marginTop: 9,
+    fontSize: 13
+  },
   card: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 20,
+    backgroundColor: "white",
+    borderRadius: 22,
+    marginHorizontal: 18,
     marginTop: -45,
-    paddingHorizontal: 24,
-    paddingVertical: 30,
-    borderRadius: 24,
-
-    shadowColor: "#0F172A",
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
+    padding: 22,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: C.border
   },
-
-  welcomeContainer: {
-    alignItems: "center",
-    marginBottom: 25,
-  },
-
-  welcomeTitle: {
+  title: {
     fontSize: 25,
     fontWeight: "800",
-    color: COLORS.text,
     textAlign: "center",
+    color: C.text
   },
-
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+  subtitle: {
     textAlign: "center",
-    marginTop: 8,
-    lineHeight: 21,
+    color: C.textSecondary,
+    marginTop: 7,
+    marginBottom: 26
   },
-
-  forgotButton: {
-    alignSelf: "center",
-    alignItems: "center",
-    marginTop: -5,
-    marginBottom: 25,
-    paddingVertical: 8,
-  },
-
-  forgotText: {
-    color: COLORS.primary,
-    fontSize: 14,
+  label: {
+    color: C.text,
     fontWeight: "600",
-    textAlign: "center",
+    marginBottom: 8
   },
-
-  loginButton: {
-    backgroundColor: COLORS.primary,
-    width: "100%",
-    minHeight: 56,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-
-    shadowColor: COLORS.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  buttonContent: {
+  field: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
+    gap: 10,
+    backgroundColor: C.background,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 12,
+    paddingHorizontal: 13,
+    marginBottom: 19,
+    minHeight: 54
   },
-
-  loginButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
+  input: {
+    flex: 1,
+    minWidth: 0,
+    color: C.text,
+    fontSize: 14,
+    paddingVertical: 12
+  },
+  link: {
+    textAlign: "center",
+    color: C.primary,
     fontWeight: "700",
-    textAlign: "center",
+    marginBottom: 18
   },
-
-  registerContainer: {
-    flexDirection: "row",
+  button: {
+    backgroundColor: C.primary,
+    borderRadius: 12,
+    minHeight: 53,
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "center"
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "800",
+    fontSize: 16
+  },
+  register: {
+    flexDirection: "row",
     flexWrap: "wrap",
-    marginTop: 25,
-    gap: 5,
-  },
-
-  registerQuestion: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-  },
-
-  registerButton: {
-    paddingVertical: 5,
-  },
-
-  registerLink: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.primary,
-    textAlign: "center",
-  },
-
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 24
+  }
 });
