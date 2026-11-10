@@ -58,21 +58,43 @@ export default function MyReservationsScreen({ navigation }) {
                     />
                   )}
 
+
                   <Button
                     title="Cancelar reserva"
                     danger
-                    onPress={() => Alert.alert(
-                      "Cancelar",
-                      "¿Cancelar esta reserva?",
-                      [
-                        { text: "No", style: "cancel" },
-                        {
-                          text: "Sí",
-                          onPress: () => cancelReservation(r.id)
-                        }
-                      ]
-                    )}
+                    onPress={() =>
+                      Alert.alert(
+                        "Cancelar reserva",
+                        "¿Estás seguro de que deseas cancelar esta reserva?",
+                        [
+                          {
+                            text: "No",
+                            style: "cancel",
+                          },
+                          {
+                            text: "Sí, cancelar",
+                            style: "destructive",
+                            onPress: async () => {
+                              const resultado = await cancelReservation(r.id);
+
+                              if (resultado) {
+                                Alert.alert(
+                                  "Reserva cancelada",
+                                  "Tu reserva fue cancelada correctamente."
+                                );
+                              } else {
+                                Alert.alert(
+                                  "Error",
+                                  "No se pudo cancelar la reserva."
+                                );
+                              }
+                            },
+                          },
+                        ]
+                      )
+                    }
                   />
+
                 </>
               )}
             </Card>

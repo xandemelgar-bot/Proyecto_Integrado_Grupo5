@@ -18,7 +18,8 @@ export default function ReservationScreen({ navigation, route }) {
   const selected = spaces.find(s => s.id === spaceId);
 
 
-  const submit = () => {
+
+  const submit = async () => {
     if (!spaceId) {
       return Alert.alert(
         "Selecciona un espacio",
@@ -26,7 +27,7 @@ export default function ReservationScreen({ navigation, route }) {
       );
     }
 
-    const result = reserve(spaceId, hours);
+    const result = await reserve(spaceId, hours);
 
     if (!result.ok) {
       return Alert.alert(
@@ -47,6 +48,7 @@ export default function ReservationScreen({ navigation, route }) {
       ]
     );
   };
+
 
 
   return (
