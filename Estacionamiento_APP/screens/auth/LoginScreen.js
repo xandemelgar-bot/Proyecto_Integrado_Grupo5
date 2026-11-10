@@ -562,14 +562,17 @@ const s = StyleSheet.create({
   // ==========================================
 
   forgotButton: {
-    alignSelf: "flex-end",
-    marginBottom: 22
+    alignSelf: "stretch",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 22,
   },
 
   link: {
     color: "#1165D8",
     fontWeight: "700",
-    fontSize: 13
+    fontSize: 13,
+    textAlign: "center",
   },
 
   // ==========================================
