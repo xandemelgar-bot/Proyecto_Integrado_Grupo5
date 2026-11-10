@@ -4,6 +4,7 @@ import {
   Screen, Card, Heading, Metric, Muted, Button
 } from "../../components/UI";
 import { useParking } from "../../contexts/ParkingContext";
+import MenuCard from "../../components/MenuCard";
 
 export default function UsuarioScreen({ navigation }) {
   const { stats, reservations } = useParking();
@@ -38,17 +39,60 @@ export default function UsuarioScreen({ navigation }) {
         />
       </View>
 
+
       <Card>
         <Heading>Accesos rápidos</Heading>
-        {options.map(([title, route]) => (
-          <Button
-            key={route}
-            title={title}
-            secondary
-            onPress={() => navigation.navigate(route)}
+
+        <View style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          rowGap: 14,
+        }}>
+          <MenuCard
+            title="Estacionamientos"
+            subtitle="Ver espacios libres"
+            icon="car-sport-outline"
+            onPress={() => navigation.navigate("Parking")}
           />
-        ))}
+
+          <MenuCard
+            title="Reservar"
+            subtitle="Crear una reserva"
+            icon="calendar-outline"
+            onPress={() => navigation.navigate("Reservation")}
+          />
+
+          <MenuCard
+            title="Mis reservas"
+            subtitle="Historial de reservas"
+            icon="time-outline"
+            onPress={() => navigation.navigate("MyReservations")}
+          />
+
+          <MenuCard
+            title="Pagos"
+            subtitle="Consultar pagos"
+            icon="card-outline"
+            onPress={() => navigation.navigate("Payment")}
+          />
+
+          <MenuCard
+            title="Notificaciones"
+            subtitle="Avisos importantes"
+            icon="notifications-outline"
+            onPress={() => navigation.navigate("Notifications")}
+          />
+
+          <MenuCard
+            title="Mi perfil"
+            subtitle="Datos de mi cuenta"
+            icon="person-outline"
+            onPress={() => navigation.navigate("Profile")}
+          />
+        </View>
       </Card>
+
 
       <Card>
         <Heading>Información</Heading>

@@ -1,11 +1,12 @@
 import React from "react";
-import { View } from "react-native";
+import { View, StyleSheet } from "react-native";
 import {
   Screen, Card, Heading, Metric, Muted, Button, money
 } from "../../components/UI";
 import { useParking } from "../../contexts/ParkingContext";
 import { Alert } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
+import MenuCard from "../../components/MenuCard";
 
 export default function AdminScreen({ navigation }) {
   const { stats, connection, reservations } = useParking();
@@ -88,17 +89,58 @@ export default function AdminScreen({ navigation }) {
         </Muted>
       </Card>
 
+
       <Card>
         <Heading>Administración</Heading>
-        {options.map(([title, route]) => (
-          <Button
-            key={route}
-            title={title}
-            secondary
-            onPress={() => navigation.navigate(route)}
+
+        <View style={styles.menuGrid}>
+          <MenuCard
+            title="Espacios"
+            subtitle="24 estacionamientos"
+            icon="car-sport"
+            onPress={() =>
+              navigation.navigate("ParkingManagement")
+            }
           />
-        ))}
+
+          <MenuCard
+            title="Reservaciones"
+            subtitle="Gestionar reservas"
+            icon="calendar-outline"
+            onPress={() =>
+              navigation.navigate("ReservationsAdmin")
+            }
+          />
+
+          <MenuCard
+            title="Tarifas"
+            subtitle="Precios y cobros"
+            icon="wallet-outline"
+            onPress={() =>
+              navigation.navigate("Tariffs")
+            }
+          />
+
+          <MenuCard
+            title="Reportes"
+            subtitle="Ver estadísticas"
+            icon="bar-chart-outline"
+            onPress={() =>
+              navigation.navigate("Reports")
+            }
+          />
+
+          <MenuCard
+            title="Predicciones"
+            subtitle="Inteligencia artificial"
+            icon="analytics-outline"
+            onPress={() =>
+              navigation.navigate("Predictions")
+            }
+          />
+        </View>
       </Card>
+
       <Card>
         <Button
           title="Cerrar sesión"
@@ -111,3 +153,11 @@ export default function AdminScreen({ navigation }) {
 
   );
 }
+const styles = StyleSheet.create({
+  menuGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 14,
+  },
+});
