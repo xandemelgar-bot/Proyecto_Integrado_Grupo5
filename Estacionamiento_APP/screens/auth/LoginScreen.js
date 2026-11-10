@@ -549,7 +549,7 @@ const s = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: "#102A55",
-    fontSize: 14,
+    fontSize: 13,
     paddingVertical: 12
   },
 
