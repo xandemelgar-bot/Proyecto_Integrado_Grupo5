@@ -103,13 +103,51 @@ export function ParkingProvider({ children }) {
     return () => unsubscribe();
   }, [usuario?.uid]);
 
+
+  // =========================================
+  // SINCRONIZACIÓN DE PAGOS
+  // =========================================
+
+  useEffect(() => {
+    setPayments([]);
+
+    if (!usuario?.uid) return;
+
+    const referencia = collection(db, "pagos");
+
+    const consulta = esAdmin
+      ? query(referencia)
+      : query(
+        referencia,
+        where("userId", "==", usuario.uid)
+      );
+
+    const unsubscribe = onSnapshot(
+      consulta,
+      (snapshot) => {
+        const lista = snapshot.docs.map((documento) => ({
+          id: documento.id,
+          ...documento.data(),
+        }));
+
+        setPayments(lista);
+      },
+      (error) => {
+        console.log("Error al cargar pagos:", error);
+        setPayments([]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [usuario?.uid, esAdmin]);
+
+
   // =========================================
   // SINCRONIZACIÓN DE RESERVAS
   // =========================================
 
   useEffect(() => {
     setReservations([]);
-    setPayments([]);
     setNotifications([]);
 
     if (!usuario) return;
@@ -328,37 +366,97 @@ export function ParkingProvider({ children }) {
   // PAGOS SIMULADOS
   // =========================================
 
-  const pay = (id) => {
-    const reserva = reservations.find(
-      (r) => r.id === id
+
+  // =========================================
+  // PAGOS SIMULADOS CON FIREBASE
+  // =========================================
+
+  const pay = async (id) => {
+    if (!usuario?.uid) return false;
+
+    const reservaRef = doc(
+      db,
+      "reservaciones",
+      String(id)
     );
 
-    if (
-      !usuario ||
-      !reserva ||
-      reserva.userId !== usuario.uid ||
-      reserva.status !== "activa" ||
-      payments.some((p) => p.reservationId === id)
-    ) {
+    // Un documento por reserva impide
+    // registrar dos pagos para la misma reserva.
+    const pagoRef = doc(
+      db,
+      "pagos",
+      String(id)
+    );
+
+    try {
+      const monto = await runTransaction(
+        db,
+        async (transaction) => {
+          const reservaDoc =
+            await transaction.get(reservaRef);
+
+          const pagoDoc =
+            await transaction.get(pagoRef);
+
+          if (!reservaDoc.exists()) {
+            throw new Error("La reserva no existe.");
+          }
+
+          const reserva = reservaDoc.data();
+
+          if (reserva.userId !== usuario.uid) {
+            throw new Error(
+              "Esta reserva no pertenece a tu cuenta."
+            );
+          }
+
+          if (reserva.status !== "activa") {
+            throw new Error(
+              "La reserva no está activa."
+            );
+          }
+
+          if (pagoDoc.exists()) {
+            throw new Error(
+              "Esta reserva ya fue pagada."
+            );
+          }
+
+          const importe = Number(reserva.amount);
+
+          if (
+            !Number.isFinite(importe) ||
+            importe <= 0
+          ) {
+            throw new Error("Importe inválido.");
+          }
+
+          transaction.set(pagoRef, {
+            userId: usuario.uid,
+            reservationId: String(id),
+            spaceId: reserva.spaceId,
+            amount: importe,
+            status: "completado",
+            date: new Date().toISOString(),
+            createdAt: serverTimestamp(),
+            tipo: "simulado",
+          });
+
+          return importe;
+        }
+      );
+
+      notify(
+        `Pago simulado realizado: Q${monto.toFixed(2)}`
+      );
+
+      return true;
+    } catch (error) {
+      console.log("Error al pagar:", error);
       return false;
     }
-
-    setPayments((prev) => [
-      {
-        id: Date.now(),
-        reservationId: id,
-        amount: reserva.amount,
-        date: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-
-    notify(
-      `Pago simulado realizado: Q${reserva.amount.toFixed(2)}`
-    );
-
-    return true;
   };
+
 
   // =========================================
   // CAMBIAR ESTADO DE ESPACIO
@@ -437,10 +535,12 @@ export function ParkingProvider({ children }) {
       (s) => s.estado === "reservado"
     ).length,
 
-    income: payments.reduce(
-      (total, p) => total + p.amount,
-      0
-    ),
+    income: payments
+      .filter((p) => p.status === "completado")
+      .reduce(
+        (total, p) => total + Number(p.amount || 0),
+        0
+      ),
   }), [spaces, payments]);
 
   return (
