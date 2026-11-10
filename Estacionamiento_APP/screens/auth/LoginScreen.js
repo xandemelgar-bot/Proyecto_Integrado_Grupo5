@@ -21,10 +21,6 @@ import Svg, { Path } from "react-native-svg";
 
 import { useAuth } from "../../hooks/useAuth";
 
-// ==========================================
-// LOGIN SCREEN
-// ==========================================
-
 export default function LoginScreen({ navigation }) {
   const { iniciarSesion } = useAuth();
 
@@ -64,10 +60,6 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-  // ==========================================
-  // DISEÑO
-  // ==========================================
-
   return (
     <SafeAreaView
       style={s.safe}
@@ -81,17 +73,16 @@ export default function LoginScreen({ navigation }) {
       <KeyboardAvoidingView
         style={s.main}
         behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
+          Platform.OS === "ios" ? "padding" : undefined
         }
       >
         <ScrollView
+          style={s.scrollView}
+          contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={s.scroll}
         >
-          {/* FONDO PRINCIPAL */}
+          {/* FONDO GENERAL */}
 
           <LinearGradient
             colors={[
@@ -104,7 +95,7 @@ export default function LoginScreen({ navigation }) {
           />
 
           {/* ==================================
-              ENCABEZADO DEGRADADO
+              ENCABEZADO
           ================================== */}
 
           <LinearGradient
@@ -117,30 +108,24 @@ export default function LoginScreen({ navigation }) {
             end={{ x: 1, y: 1 }}
             style={s.hero}
           >
-            {/* CÍRCULOS DECORATIVOS */}
-
             <View style={s.circleOne} />
             <View style={s.circleTwo} />
-
-            {/* LOGOTIPO */}
 
             <View style={s.logoContainer}>
               <Ionicons
                 name="scan-outline"
-                size={82}
+                size={76}
                 color="#FFFFFF"
                 style={s.scanIcon}
               />
 
               <Ionicons
                 name="car-sport"
-                size={46}
+                size={43}
                 color="#FFFFFF"
                 style={s.carIcon}
               />
             </View>
-
-            {/* NOMBRE */}
 
             <Text style={s.brand}>
               Estacionamiento{"\n"}Inteligente
@@ -152,173 +137,180 @@ export default function LoginScreen({ navigation }) {
           </LinearGradient>
 
           {/* ==================================
-              FORMULARIO FLOTANTE
+              CONTENEDOR DEL FORMULARIO
           ================================== */}
 
-          <View style={s.card}>
-            {/* LÍNEA DECORATIVA */}
+          <View style={s.formContainer}>
+            <View style={s.card}>
+              {/* LÍNEA SUPERIOR */}
 
-            <LinearGradient
-              colors={[
-                "#0754BD",
-                "#2585FF",
-                "#8BC5FF"
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={s.cardAccent}
-            />
-
-            <Text style={s.title}>
-              ¡Bienvenido!
-            </Text>
-
-            <Text style={s.subtitle}>
-              Ingresa tus datos para continuar
-            </Text>
-
-            {/* CORREO ELECTRÓNICO */}
-
-            <Text style={s.label}>
-              Correo electrónico
-            </Text>
-
-            <View style={s.field}>
-              <View style={s.fieldIcon}>
-                <Ionicons
-                  name="mail-outline"
-                  size={21}
-                  color="#1673E8"
-                />
-              </View>
-
-              <TextInput
-                style={s.input}
-                value={correo}
-                onChangeText={setCorreo}
-                placeholder="ejemplo@correo.com"
-                placeholderTextColor="#91A5C0"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                editable={!loading}
-              />
-            </View>
-
-            {/* CONTRASEÑA */}
-
-            <Text style={s.label}>
-              Contraseña
-            </Text>
-
-            <View style={s.field}>
-              <View style={s.fieldIcon}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={21}
-                  color="#1673E8"
-                />
-              </View>
-
-              <TextInput
-                style={s.input}
-                value={contrasena}
-                onChangeText={setContrasena}
-                placeholder="Ingresa tu contraseña"
-                placeholderTextColor="#91A5C0"
-                secureTextEntry={!visible}
-                autoCapitalize="none"
-                editable={!loading}
-              />
-
-              <TouchableOpacity
-                onPress={() => setVisible(!visible)}
-                style={s.eyeButton}
-              >
-                <Ionicons
-                  name={
-                    visible
-                      ? "eye-off-outline"
-                      : "eye-outline"
-                  }
-                  size={21}
-                  color="#7A9BC7"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* RECUPERAR CONTRASEÑA */}
-
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("ForgotPassword")
-              }
-              style={s.forgotButton}
-            >
-              <Text style={s.link}>
-                ¿Olvidaste tu contraseña?
-              </Text>
-            </TouchableOpacity>
-
-            {/* BOTÓN DE INICIAR SESIÓN */}
-
-            <TouchableOpacity
-              onPress={login}
-              disabled={loading}
-              activeOpacity={0.85}
-              style={s.buttonWrapper}
-            >
               <LinearGradient
                 colors={[
+                  "#0754BD",
                   "#2585FF",
-                  "#0754C9"
+                  "#8BC5FF"
                 ]}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.button}
-              >
-                {loading ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <View style={s.buttonContent}>
-                    <Ionicons
-                      name="log-in-outline"
-                      size={23}
-                      color="#FFFFFF"
-                    />
+                end={{ x: 1, y: 0 }}
+                style={s.cardAccent}
+              />
 
-                    <Text style={s.buttonText}>
-                      Iniciar sesión
-                    </Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+              {/* TÍTULO */}
 
-            {/* REGISTRO */}
-
-            <View style={s.register}>
-              <Text style={s.registerText}>
-                ¿No tienes una cuenta?{" "}
+              <Text style={s.title}>
+                ¡Bienvenido!
               </Text>
+
+              <Text style={s.subtitle}>
+                Ingresa tus datos para continuar
+              </Text>
+
+              {/* CORREO */}
+
+              <Text style={s.label}>
+                Correo electrónico
+              </Text>
+
+              <View style={s.field}>
+                <View style={s.fieldIcon}>
+                  <Ionicons
+                    name="mail-outline"
+                    size={21}
+                    color="#1673E8"
+                  />
+                </View>
+
+                <TextInput
+                  style={s.input}
+                  value={correo}
+                  onChangeText={setCorreo}
+                  placeholder="ejemplo@correo.com"
+                  placeholderTextColor="#91A5C0"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  editable={!loading}
+                />
+              </View>
+
+              {/* CONTRASEÑA */}
+
+              <Text style={s.label}>
+                Contraseña
+              </Text>
+
+              <View style={s.field}>
+                <View style={s.fieldIcon}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={21}
+                    color="#1673E8"
+                  />
+                </View>
+
+                <TextInput
+                  style={s.input}
+                  value={contrasena}
+                  onChangeText={setContrasena}
+                  placeholder="Ingresa tu contraseña"
+                  placeholderTextColor="#91A5C0"
+                  secureTextEntry={!visible}
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+
+                <TouchableOpacity
+                  onPress={() => setVisible(!visible)}
+                  style={s.eyeButton}
+                >
+                  <Ionicons
+                    name={
+                      visible
+                        ? "eye-off-outline"
+                        : "eye-outline"
+                    }
+                    size={21}
+                    color="#7A9BC7"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* RECUPERAR CONTRASEÑA */}
 
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate("Register")
+                  navigation.navigate("ForgotPassword")
                 }
+                style={s.forgotButton}
               >
-                <Text style={s.registerLink}>
-                  Regístrate
+                <Text style={s.link}>
+                  ¿Olvidaste tu contraseña?
                 </Text>
               </TouchableOpacity>
+
+              {/* BOTÓN PRINCIPAL */}
+
+              <TouchableOpacity
+                onPress={login}
+                disabled={loading}
+                activeOpacity={0.85}
+                style={s.buttonWrapper}
+              >
+                <LinearGradient
+                  colors={[
+                    "#2585FF",
+                    "#0754C9"
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.button}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <View style={s.buttonContent}>
+                      <Ionicons
+                        name="log-in-outline"
+                        size={23}
+                        color="#FFFFFF"
+                      />
+
+                      <Text style={s.buttonText}>
+                        Iniciar sesión
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* REGISTRO */}
+
+              <View style={s.register}>
+                <Text style={s.registerText}>
+                  ¿No tienes una cuenta?{" "}
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("Register")
+                  }
+                >
+                  <Text style={s.registerLink}>
+                    Regístrate
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
           {/* ==================================
-              DECORACIÓN INFERIOR
+              ONDAS INFERIORES
           ================================== */}
 
-          <View style={s.bottomDecoration}>
+          <View
+            style={s.bottomDecoration}
+            pointerEvents="none"
+          >
             <Svg
               width="100%"
               height="100%"
@@ -379,20 +371,28 @@ const s = StyleSheet.create({
     backgroundColor: "#EAF4FF"
   },
 
+  scrollView: {
+    flex: 1
+  },
+
   scroll: {
     flexGrow: 1,
     paddingBottom: 0
   },
 
+  // ==========================================
   // ENCABEZADO
+  // ==========================================
 
   hero: {
     alignItems: "center",
-    paddingTop: 42,
+    paddingTop: 24,
     paddingHorizontal: 25,
-    paddingBottom: 85,
+    paddingBottom: 30,
     overflow: "hidden",
-    position: "relative"
+    position: "relative",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24
   },
 
   circleOne: {
@@ -415,15 +415,13 @@ const s = StyleSheet.create({
     top: 80
   },
 
-  // LOGOTIPO
-
   logoContainer: {
-    width: 100,
-    height: 100,
+    width: 88,
+    height: 88,
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    marginBottom: 12
+    marginBottom: 10
   },
 
   scanIcon: {
@@ -435,32 +433,44 @@ const s = StyleSheet.create({
   },
 
   brand: {
-    fontSize: 29,
+    fontSize: 27,
     fontWeight: "900",
     color: "#FFFFFF",
     textAlign: "center",
-    lineHeight: 36,
+    lineHeight: 34,
     letterSpacing: -0.5
   },
 
   tag: {
     color: "#EAF4FF",
     textAlign: "center",
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: 9,
+    fontSize: 13,
     fontWeight: "500"
   },
 
+  // ==========================================
+  // CONTENEDOR DEL FORMULARIO
+  // ==========================================
+
+  formContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingTop: 24,
+    paddingBottom: 20
+  },
+
+  // ==========================================
   // TARJETA
+  // ==========================================
 
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 25,
     marginHorizontal: 20,
-    marginTop: -48,
     paddingHorizontal: 22,
-    paddingTop: 30,
-    paddingBottom: 28,
+    paddingTop: 28,
+    paddingBottom: 26,
 
     elevation: 9,
 
@@ -497,10 +507,12 @@ const s = StyleSheet.create({
     color: "#64748B",
     fontSize: 13,
     marginTop: 8,
-    marginBottom: 28
+    marginBottom: 24
   },
 
+  // ==========================================
   // CAMPOS
+  // ==========================================
 
   label: {
     color: "#24436C",
@@ -522,8 +534,8 @@ const s = StyleSheet.create({
     borderRadius: 14,
 
     paddingHorizontal: 12,
-    marginBottom: 20,
-    minHeight: 56
+    marginBottom: 18,
+    minHeight: 54
   },
 
   fieldIcon: {
@@ -545,11 +557,13 @@ const s = StyleSheet.create({
     padding: 5
   },
 
+  // ==========================================
   // RECUPERACIÓN
+  // ==========================================
 
   forgotButton: {
     alignSelf: "flex-end",
-    marginBottom: 25
+    marginBottom: 22
   },
 
   link: {
@@ -558,7 +572,9 @@ const s = StyleSheet.create({
     fontSize: 13
   },
 
+  // ==========================================
   // BOTÓN PRINCIPAL
+  // ==========================================
 
   buttonWrapper: {
     borderRadius: 14,
@@ -595,14 +611,16 @@ const s = StyleSheet.create({
     fontSize: 16
   },
 
+  // ==========================================
   // REGISTRO
+  // ==========================================
 
   register: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 27
+    marginTop: 24
   },
 
   registerText: {
@@ -616,12 +634,12 @@ const s = StyleSheet.create({
     fontSize: 13
   },
 
+  // ==========================================
   // ONDAS INFERIORES
+  // ==========================================
 
   bottomDecoration: {
     height: 115,
-    marginTop: "auto",
-    paddingTop: 20,
     width: "100%",
     justifyContent: "flex-end",
     flexShrink: 0
