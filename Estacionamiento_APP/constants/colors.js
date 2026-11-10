@@ -1,19 +1,16 @@
 
 const COLORS = {
-    primary: '#2563EB',
-    primaryDark: '#1D4ED8',
+  primary: "#2563EB",
+  background: "#F4F7FB",
+  surface: "#FFFFFF",
+  text: "#1E293B",
+  textSecondary: "#64748B",
+  border: "#E2E8F0",
 
-    background: '#F4F6F9',
-    surface: '#FFFFFF',
-
-    text: '#172B4D',
-    textSecondary: '#64748B',
-
-    success: '#16A34A',
-    danger: '#DC2626',
-    warning: '#F59E0B',
-
-    border: '#E2E8F0',
+  success: "#16A34A",
+  danger: "#DC2626",
+  warning: "#F59E0B",
+  disabled: "#64748B",
 };
 
 export default COLORS;
