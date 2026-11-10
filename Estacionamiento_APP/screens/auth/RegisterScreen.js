@@ -1,298 +1,123 @@
-
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from "react-native";
-
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-} from "firebase/auth";
-
-import {
-  doc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-
-import { auth, db } from "../../services/firebase";
+import { Text, TextInput, Alert, StyleSheet } from "react-native";
+import { Screen, Card, Button } from "../../components/UI";
+import { useAuth } from "../../hooks/useAuth";
+import C from "../../constants/colors";
 
 export default function RegisterScreen({ navigation }) {
+  const auth = useAuth();
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
-  const [contrasena, setContrasena] = useState("");
+  const [clave, setClave] = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const registrarUsuario = async () => {
-    const nombreLimpio = nombre.trim();
-    const correoLimpio = correo.trim().toLowerCase();
+  const submit = async () => {
+    if (!nombre.trim() || !correo.trim() || !clave) {
+      return Alert.alert("Campos incompletos", "Completa los campos");
+    }
 
-    if (
-      !nombreLimpio ||
-      !correoLimpio ||
-      !contrasena ||
-      !confirmar
-    ) {
-      Alert.alert(
-        "Campos incompletos",
-        "Completa todos los campos."
+    if (clave.length < 6) {
+      return Alert.alert("Contraseña", "Utiliza al menos 6 caracteres");
+    }
+
+    if (clave !== confirmar) {
+      return Alert.alert("Contraseñas", "Las contraseñas no coinciden");
+    }
+
+    if (typeof auth.registrarUsuario !== "function") {
+      return Alert.alert(
+        "Integración pendiente",
+        "Agrega registrarUsuario a hooks/useAuth.js"
       );
-      return;
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoLimpio)) {
-      Alert.alert("Error", "Ingresa un correo válido.");
-      return;
-    }
-
-    if (contrasena.length < 6) {
-      Alert.alert(
-        "Contraseña corta",
-        "La contraseña debe tener al menos 6 caracteres."
-      );
-      return;
-    }
-
-    if (contrasena !== confirmar) {
-      Alert.alert(
-        "Error",
-        "Las contraseñas no coinciden."
-      );
-      return;
-    }
-
-    setLoading(true);
 
     try {
-      const resultado = await createUserWithEmailAndPassword(
-        auth,
-        correoLimpio,
-        contrasena
+      setLoading(true);
+      await auth.registrarUsuario(
+        correo.trim().toLowerCase(),
+        clave,
+        nombre.trim()
       );
-
-      const usuario = resultado.user;
-
-      // Guardar el nombre en Authentication
-      await updateProfile(usuario, {
-        displayName: nombreLimpio,
-      });
-
-      // Crear el documento del usuario en Firestore
-      await setDoc(doc(db, "usuarios", usuario.uid), {
-        nombre: nombreLimpio,
-        correo: usuario.email,
-        rol: "usuario",
-        fechaRegistro: serverTimestamp(),
-      });
-
-      Alert.alert(
-        "Registro exitoso",
-        "Tu cuenta se creó correctamente."
-      );
-
-      // Firebase inicia sesión automáticamente
-      // después de registrar al usuario.
-    } catch (error) {
-      console.log("Error al registrar:", error.code);
-
-      let mensaje = "No se pudo completar el registro.";
-
-      switch (error.code) {
-        case "auth/email-already-in-use":
-          mensaje = "Este correo ya está registrado.";
-          break;
-
-        case "auth/invalid-email":
-          mensaje = "El correo electrónico no es válido.";
-          break;
-
-        case "auth/weak-password":
-          mensaje = "Utiliza una contraseña más segura.";
-          break;
-
-        case "auth/network-request-failed":
-          mensaje = "Verifica tu conexión a Internet.";
-          break;
-
-        case "permission-denied":
-        case "firestore/permission-denied":
-          mensaje =
-            "La cuenta se creó, pero no se pudo guardar el perfil. Revisa las reglas de Firestore.";
-          break;
-      }
-
-      Alert.alert("Aviso", mensaje);
+      Alert.alert("Cuenta creada", "Tu cuenta está lista.");
+    } catch (e) {
+      Alert.alert("Registro", e.message || "No se pudo registrar");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <Screen
+      title="Crear cuenta"
+      subtitle="Regístrate como conductor"
+      navigation={navigation}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.icon}>🚗</Text>
-
-        <Text style={styles.title}>Crear cuenta</Text>
-
-        <Text style={styles.subtitle}>
-          Regístrate en Estacionamiento Inteligente
-        </Text>
-
-        <Text style={styles.label}>Nombre completo</Text>
+      <Card>
+        <Text style={s.label}>Nombre completo</Text>
         <TextInput
-          style={styles.input}
-          placeholder="Ingresa tu nombre"
-          placeholderTextColor="#94A3B8"
+          style={s.input}
           value={nombre}
           onChangeText={setNombre}
-          autoCapitalize="words"
-          editable={!loading}
+          placeholder="Tu nombre"
         />
 
-        <Text style={styles.label}>Correo electrónico</Text>
+        <Text style={s.label}>Correo electrónico</Text>
         <TextInput
-          style={styles.input}
-          placeholder="ejemplo@correo.com"
-          placeholderTextColor="#94A3B8"
+          style={s.input}
           value={correo}
           onChangeText={setCorreo}
-          keyboardType="email-address"
           autoCapitalize="none"
-          autoCorrect={false}
-          editable={!loading}
+          keyboardType="email-address"
+          placeholder="ejemplo@correo.com"
         />
 
-        <Text style={styles.label}>Contraseña</Text>
+        <Text style={s.label}>Contraseña</Text>
         <TextInput
-          style={styles.input}
-          placeholder="Mínimo 6 caracteres"
-          placeholderTextColor="#94A3B8"
-          value={contrasena}
-          onChangeText={setContrasena}
+          style={s.input}
+          value={clave}
+          onChangeText={setClave}
           secureTextEntry
-          editable={!loading}
+          placeholder="Mínimo 6 caracteres"
         />
 
-        <Text style={styles.label}>Confirmar contraseña</Text>
+        <Text style={s.label}>Confirmar contraseña</Text>
         <TextInput
-          style={styles.input}
-          placeholder="Repite tu contraseña"
-          placeholderTextColor="#94A3B8"
+          style={s.input}
           value={confirmar}
           onChangeText={setConfirmar}
           secureTextEntry
-          editable={!loading}
+          placeholder="Repite tu contraseña"
         />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={registrarUsuario}
+        <Button
+          title={loading ? "Creando cuenta..." : "Crear cuenta"}
+          onPress={submit}
           disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>
-              Registrarse
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.loginButton}
+        />
+        <Button
+          title="Volver a iniciar sesión"
+          secondary
           onPress={() => navigation.goBack()}
-          disabled={loading}
-        >
-          <Text style={styles.loginText}>
-            ¿Ya tienes cuenta? Inicia sesión
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        />
+      </Card>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F7FA",
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 25,
-  },
-  icon: {
-    fontSize: 45,
-    textAlign: "center",
-    marginBottom: 15,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#1E293B",
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    textAlign: "center",
-    marginBottom: 30,
-  },
+const s = StyleSheet.create({
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: 8,
+    fontWeight: "700",
+    color: C.text,
+    marginBottom: 8
   },
   input: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.background,
+    borderColor: C.border,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
     borderRadius: 12,
-    paddingHorizontal: 15,
-    height: 52,
+    padding: 14,
     marginBottom: 18,
-    fontSize: 15,
-    color: "#1E293B",
-  },
-  button: {
-    backgroundColor: "#2563EB",
-    borderRadius: 12,
-    height: 55,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  loginButton: {
-    marginTop: 25,
-    alignItems: "center",
-  },
-  loginText: {
-    color: "#2563EB",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+    color: C.text
+  }
 });
