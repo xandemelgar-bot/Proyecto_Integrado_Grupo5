@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   View,
@@ -7,74 +7,169 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
   Alert,
+  StyleSheet,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  where,
+  writeBatch,
+} from "firebase/firestore";
+
+import { db } from "../../services/firebase";
+import { useAuth } from "../../contexts/AuthContext";
 import { useParking } from "../../contexts/ParkingContext";
 
 const BLUE = "#2563EB";
 
+
 export default function PaymentScreen({ navigation, route }) {
+  const { usuario } = useAuth();
   const { reservations, payments, pay } = useParking();
 
-  const [selected, setSelected] = useState(
-    route?.params?.reservationId || null
-  );
+  const [cards, setCards] = useState([]);
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [selectedReservation, setSelectedReservation] =
+    useState(route?.params?.reservationId || null);
 
+  const [showForm, setShowForm] = useState(false);
   const [numero, setNumero] = useState("");
   const [titular, setTitular] = useState("");
   const [vencimiento, setVencimiento] = useState("");
   const [cvv, setCvv] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [saveCard, setSaveCard] = useState(true);
 
-  const pending = reservations.filter(
+  const [loading, setLoading] = useState(false);
+  const [loadingCards, setLoadingCards] = useState(true);
+
+  // =====================================
+  // CARGAR TARJETAS DE LA CUENTA ACTUAL
+  // =====================================
+
+  useEffect(() => {
+    setCards([]);
+    setSelectedCard(null);
+    setLoadingCards(true);
+    setShowForm(false);
+
+    if (!usuario?.uid) {
+      setLoadingCards(false);
+      return;
+    }
+
+    const consulta = query(
+      collection(db, "tarjetasDemo"),
+      where("userId", "==", usuario.uid)
+    );
+
+    const unsubscribe = onSnapshot(
+      consulta,
+      (snapshot) => {
+        const lista = snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
+
+        lista.sort((a, b) =>
+          a.predeterminada === b.predeterminada
+            ? 0
+            : a.predeterminada
+              ? -1
+              : 1
+        );
+
+        setCards(lista);
+
+        setSelectedCard((actual) => {
+          if (lista.some((c) => c.id === actual)) {
+            return actual;
+          }
+
+          return (
+            lista.find((c) => c.predeterminada)?.id ||
+            lista[0]?.id ||
+            null
+          );
+        });
+
+        setLoadingCards(false);
+      },
+      (error) => {
+        console.log("Error tarjetas:", error);
+        setLoadingCards(false);
+        Alert.alert(
+          "Error",
+          "No se pudieron cargar las tarjetas."
+        );
+      }
+    );
+
+    return unsubscribe;
+  }, [usuario?.uid]);
+
+  const pendientes = reservations.filter(
     (r) =>
       r.status === "activa" &&
       !payments.some((p) => p.reservationId === r.id)
   );
 
-  const reservation = pending.find(
-    (r) => r.id === selected
+  const reserva = pendientes.find(
+    (r) => r.id === selectedReservation
   );
 
-  // Solo admite números de demostración.
-  // Nunca se envían datos de tarjeta a Firebase.
+  // =====================================
+  // FORMATO DE CAMPOS
+  // =====================================
+
   const formatNumero = (value) => {
     const digits = value.replace(/\D/g, "").slice(0, 16);
-    const formatted = digits.replace(/(.{4})/g, "$1 ").trim();
-    setNumero(formatted);
+
+    setNumero(
+      digits.replace(/(.{4})/g, "$1 ").trim()
+    );
   };
 
   const formatFecha = (value) => {
     const digits = value.replace(/\D/g, "").slice(0, 4);
 
-    if (digits.length > 2) {
-      setVencimiento(
-        `${digits.slice(0, 2)}/${digits.slice(2)}`
-      );
-    } else {
-      setVencimiento(digits);
-    }
+    setVencimiento(
+      digits.length > 2
+        ? `${digits.slice(0, 2)}/${digits.slice(2)}`
+        : digits
+    );
   };
 
+  const limpiarFormulario = () => {
+    setNumero("");
+    setTitular("");
+    setVencimiento("");
+    setCvv("");
+    setShowForm(false);
+    setSaveCard(true);
+  };
 
-  const confirmarPago = async () => {
-    if (!reservation) {
-      Alert.alert(
-        "Error",
-        "Selecciona una reserva."
-      );
-      return;
-    }
+  // =====================================
+  // GUARDAR TARJETA
+  // =====================================
+
+  const agregarTarjeta = async () => {
+    if (!usuario?.uid || loading) return;
 
     const numeroLimpio = numero.replace(/\s/g, "");
     const nombreLimpio = titular.trim();
 
-    // Validar que los campos estén completos
     if (
       !numeroLimpio ||
       !nombreLimpio ||
@@ -83,24 +178,39 @@ export default function PaymentScreen({ navigation, route }) {
     ) {
       Alert.alert(
         "Campos incompletos",
-        "Completa todos los datos de la tarjeta ficticia."
+        "Completa todos los datos."
       );
       return;
     }
 
-    // Validar formato del número
+    // Para evitar capturar tarjetas reales,
+    // se utiliza un número público de prueba.
     if (!/^\d{16}$/.test(numeroLimpio)) {
       Alert.alert(
         "Número inválido",
-        "Ingresa 16 dígitos ficticios."
+        "Ingresa 16 dígitos."
       );
       return;
     }
 
-    // Validar fecha
-    const match = vencimiento.match(/^(\d{2})\/(\d{2})$/);
+    if (!/^\d{3}$/.test(cvv)) {
+      Alert.alert(
+        "Código inválido",
+        "Ingresa un código de 3 dígitos."
+      );
+      return;
+    }
 
-    if (!match || Number(match[1]) < 1 || Number(match[1]) > 12) {
+
+    const match = vencimiento.match(
+      /^(\d{2})\/(\d{2})$/
+    );
+
+    if (
+      !match ||
+      Number(match[1]) < 1 ||
+      Number(match[1]) > 12
+    ) {
       Alert.alert(
         "Fecha inválida",
         "Utiliza el formato MM/AA."
@@ -108,11 +218,156 @@ export default function PaymentScreen({ navigation, route }) {
       return;
     }
 
-    // Validar código de prueba
-    if (!/^\d{3}$/.test(cvv)) {
+    try {
+      setLoading(true);
+
+      if (saveCard) {
+        const referencia = await addDoc(
+          collection(db, "tarjetasDemo"),
+          {
+            userId: usuario.uid,
+            alias: "Mi tarjeta",
+            titular: nombreLimpio,
+            ultimos4: numeroLimpio.slice(-4),
+            vencimiento,
+            predeterminada: cards.length === 0,
+          }
+        );
+
+        setSelectedCard(referencia.id);
+      } else {
+        Alert.alert(
+          "Tarjeta validada",
+          "La tarjeta de demostración no se guardó. Para utilizarla nuevamente tendrás que introducir sus datos."
+        );
+      }
+
+      limpiarFormulario();
+
+      if (saveCard) {
+        Alert.alert(
+          "Tarjeta guardada",
+          "Tu método de pago se agregó correctamente."
+        );
+      }
+    } catch (error) {
+      console.log(error);
       Alert.alert(
-        "Código inválido",
-        "Ingresa tres dígitos ficticios."
+        "Error",
+        "No se pudo guardar la tarjeta."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =====================================
+  // CAMBIAR TARJETA PREDETERMINADA
+  // =====================================
+
+  const establecerPredeterminada = async (cardId) => {
+    if (!usuario?.uid || loading) return;
+
+    try {
+      setLoading(true);
+
+      const batch = writeBatch(db);
+
+      cards.forEach((card) => {
+        batch.update(
+          doc(db, "tarjetasDemo", card.id),
+          {
+            predeterminada: card.id === cardId,
+          }
+        );
+      });
+
+      await batch.commit();
+      setSelectedCard(cardId);
+    } catch (error) {
+      console.log(error);
+      Alert.alert(
+        "Error",
+        "No se pudo cambiar la tarjeta."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =====================================
+  // ELIMINAR TARJETA
+  // =====================================
+
+  const eliminarTarjeta = (card) => {
+    Alert.alert(
+      "Eliminar tarjeta",
+      "¿Deseas eliminar este método de pago?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+
+              const restantes = cards.filter(
+                (c) => c.id !== card.id
+              );
+
+              const batch = writeBatch(db);
+
+              batch.delete(
+                doc(db, "tarjetasDemo", card.id)
+              );
+
+              if (
+                card.predeterminada &&
+                restantes.length > 0
+              ) {
+                batch.update(
+                  doc(db, "tarjetasDemo", restantes[0].id),
+                  { predeterminada: true }
+                );
+              }
+
+              await batch.commit();
+            } catch (error) {
+              console.log(error);
+              Alert.alert(
+                "Error",
+                "No se pudo eliminar la tarjeta."
+              );
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // =====================================
+  // PAGO SIMULADO
+  // =====================================
+
+  const confirmarPago = async () => {
+    if (!reserva) {
+      Alert.alert(
+        "Selecciona una reserva",
+        "Debes seleccionar una reserva pendiente."
+      );
+      return;
+    }
+
+    if (!cards.some((c) => c.id === selectedCard)) {
+      Alert.alert(
+        "Selecciona una tarjeta",
+        "Selecciona un método de pago guardado."
       );
       return;
     }
@@ -120,142 +375,290 @@ export default function PaymentScreen({ navigation, route }) {
     try {
       setLoading(true);
 
-      const resultado = await pay(reservation.id);
+      const resultado = await pay(reserva.id);
 
       if (resultado) {
-        setNumero("");
-        setTitular("");
-        setVencimiento("");
-        setCvv("");
-        setSelected(null);
+        setSelectedReservation(null);
 
         Alert.alert(
-          "Pago simulado completado",
-          "La transacción de demostración se registró correctamente."
+          "Pago completado",
+          "Tu pago simulado se registró correctamente."
         );
       } else {
         Alert.alert(
           "Error",
-          "No se pudo registrar el pago."
+          "No se pudo completar el pago."
         );
       }
     } catch (error) {
       Alert.alert(
         "Error",
-        "Ocurrió un problema al procesar la simulación."
+        "Ocurrió un problema con el pago."
       );
     } finally {
       setLoading(false);
     }
   };
 
+  // =====================================
+  // INTERFAZ
+  // =====================================
+
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["top"]}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Método de pago</Text>
-        <Text style={styles.subtitle}>
-          Selecciona una reserva y realiza un pago de prueba
-        </Text>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color="#FFFFFF"
+          />
+        </TouchableOpacity>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            Reservas pendientes
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>
+            Métodos de pago
           </Text>
 
-          {pending.length === 0 ? (
-            <Text style={styles.muted}>
-              No tienes pagos pendientes.
-            </Text>
-          ) : (
-            pending.map((r) => (
-              <TouchableOpacity
-                key={r.id}
-                style={[
-                  styles.reservation,
-                  selected === r.id && styles.selected,
-                ]}
-                onPress={() => setSelected(r.id)}
-              >
-                <View>
-                  <Text style={styles.reservationTitle}>
-                    Espacio {r.spaceId}
-                  </Text>
-                  <Text style={styles.muted}>
-                    {r.hours} hora(s)
-                  </Text>
-                </View>
-
-                <Text style={styles.amount}>
-                  Q{Number(r.amount).toFixed(2)}
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
+          <Text style={styles.headerSubtitle}>
+            Administra tus tarjetas y pagos
+          </Text>
         </View>
 
-        {reservation && (
-          <>
-            <View style={styles.demoCard}>
-              <View style={styles.demoHeader}>
-                <Ionicons
-                  name="card-outline"
-                  size={30}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.demoLabel}>
-                  TARJETA DEMO
-                </Text>
-              </View>
+        <View style={{ width: 40 }} />
+      </View>
 
-              <Text style={styles.demoNumber}>
-                •••• •••• •••• 4242
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={
+          Platform.OS === "ios" ? "padding" : undefined
+        }
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>
+            Métodos de pago
+          </Text>
+
+          <Text style={styles.subtitle}>
+            Administra tus tarjetas y paga tus reservas
+          </Text>
+
+          {/* RESERVACIONES */}
+
+          <View style={styles.panel}>
+            <Text style={styles.heading}>
+              Reservas pendientes
+            </Text>
+
+            {pendientes.length === 0 ? (
+              <Text style={styles.muted}>
+                No tienes pagos pendientes.
               </Text>
+            ) : (
+              pendientes.map((r) => (
+                <TouchableOpacity
+                  key={r.id}
+                  style={[
+                    styles.option,
+                    selectedReservation === r.id &&
+                    styles.selected,
+                  ]}
+                  onPress={() =>
+                    setSelectedReservation(r.id)
+                  }
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.optionTitle}>
+                      Espacio {r.spaceId}
+                    </Text>
 
-              <Text style={styles.demoName}>
-                USUARIO DEMO
+                    <Text style={styles.muted}>
+                      {r.hours} hora(s)
+                    </Text>
+                  </View>
+
+                  <Text style={styles.price}>
+                    Q{Number(r.amount).toFixed(2)}
+                  </Text>
+
+                  <Ionicons
+                    name={
+                      selectedReservation === r.id
+                        ? "radio-button-on"
+                        : "radio-button-off"
+                    }
+                    size={22}
+                    color={BLUE}
+                  />
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+
+          {/* TARJETAS GUARDADAS */}
+
+          <View style={styles.panel}>
+            <Text style={styles.heading}>
+              Mis tarjetas
+            </Text>
+
+            {loadingCards ? (
+              <ActivityIndicator color={BLUE} />
+            ) : cards.length === 0 ? (
+              <Text style={styles.muted}>
+                Todavía no tienes tarjetas guardadas.
               </Text>
-            </View>
+            ) : (
+              cards.map((card) => (
+                <View
+                  key={card.id}
+                  style={styles.cardRow}
+                >
+                  <TouchableOpacity
+                    style={styles.cardSelection}
+                    onPress={() =>
+                      setSelectedCard(card.id)
+                    }
+                  >
+                    <View style={styles.cardIcon}>
+                      <Ionicons
+                        name="card-outline"
+                        size={24}
+                        color={BLUE}
+                      />
+                    </View>
 
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>
-                Datos de tarjeta
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.optionTitle}>
+                        {card.alias} •••• {card.ultimos4}
+                      </Text>
+
+                      <Text style={styles.muted}>
+                        Vence {card.vencimiento}
+                      </Text>
+
+                      {card.predeterminada && (
+                        <Text style={styles.defaultText}>
+                          Predeterminada
+                        </Text>
+                      )}
+                    </View>
+
+                    <Ionicons
+                      name={
+                        selectedCard === card.id
+                          ? "radio-button-on"
+                          : "radio-button-off"
+                      }
+                      size={23}
+                      color={BLUE}
+                    />
+                  </TouchableOpacity>
+
+                  <View style={styles.actions}>
+                    {!card.predeterminada && (
+                      <TouchableOpacity
+                        disabled={loading}
+                        onPress={() =>
+                          establecerPredeterminada(card.id)
+                        }
+                      >
+                        <Text style={styles.actionText}>
+                          Predeterminada
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      disabled={loading}
+                      onPress={() =>
+                        eliminarTarjeta(card)
+                      }
+                    >
+                      <Text style={styles.deleteText}>
+                        Eliminar
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() =>
+                setShowForm(!showForm)
+              }
+            >
+              <Ionicons
+                name={
+                  showForm
+                    ? "close-circle-outline"
+                    : "add-circle-outline"
+                }
+                size={23}
+                color={BLUE}
+              />
+
+              <Text style={styles.addText}>
+                {showForm
+                  ? "Cancelar"
+                  : "Agregar tarjeta"}
               </Text>
+            </TouchableOpacity>
+          </View>
 
-              <Text style={styles.warning}>
-                Usa únicamente estos datos ficticios:
-                {"\n"}4242 4242 4242 4242
-                {"\n"}USUARIO DEMO
-                {"\n"}12/30 · CVV 123
+          {/* FORMULARIO */}
+
+          {showForm && (
+            <View style={styles.panel}>
+              <Text style={styles.heading}>
+                Agregar tarjeta
               </Text>
 
               <Text style={styles.label}>
                 Número de tarjeta
               </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0000 0000 0000 0000"
-                keyboardType="number-pad"
-                value={numero}
-                onChangeText={formatNumero}
-                maxLength={19}
-              />
+
+              <View style={styles.inputIcon}>
+                <Ionicons
+                  name="card-outline"
+                  size={22}
+                  color="#64748B"
+                />
+
+                <TextInput
+                  style={styles.flexInput}
+                  placeholder="0000 0000 0000 0000"
+                  keyboardType="number-pad"
+                  value={numero}
+                  onChangeText={formatNumero}
+                  maxLength={19}
+                />
+              </View>
 
               <Text style={styles.label}>
                 Nombre del titular
               </Text>
+
               <TextInput
                 style={styles.input}
-                placeholder="USUARIO DEMO"
+                placeholder="Como aparece en la tarjeta"
                 autoCapitalize="characters"
                 value={titular}
                 onChangeText={setTitular}
+                maxLength={60}
               />
 
               <View style={styles.row}>
@@ -263,6 +666,7 @@ export default function PaymentScreen({ navigation, route }) {
                   <Text style={styles.label}>
                     Vencimiento
                   </Text>
+
                   <TextInput
                     style={styles.input}
                     placeholder="MM/AA"
@@ -275,172 +679,234 @@ export default function PaymentScreen({ navigation, route }) {
 
                 <View style={styles.half}>
                   <Text style={styles.label}>
-                    CVV ficticio
+                    CVV
                   </Text>
+
                   <TextInput
                     style={styles.input}
-                    placeholder="123"
+                    placeholder="•••"
                     keyboardType="number-pad"
                     secureTextEntry
                     value={cvv}
-                    onChangeText={(v) =>
-                      setCvv(v.replace(/\D/g, "").slice(0, 3))
+                    onChangeText={(value) =>
+                      setCvv(
+                        value.replace(/\D/g, "").slice(0, 3)
+                      )
                     }
                     maxLength={3}
                   />
                 </View>
               </View>
 
-              <View style={styles.summary}>
-                <Text style={styles.muted}>
-                  Espacio {reservation.spaceId}
-                </Text>
-
-                <Text style={styles.muted}>
-                  {reservation.hours} hora(s)
-                </Text>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>
-                    Total a pagar
-                  </Text>
-                  <Text style={styles.total}>
-                    Q{Number(reservation.amount).toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-
               <TouchableOpacity
-                style={[
-                  styles.payButton,
-                  loading && { opacity: 0.6 },
-                ]}
-                onPress={confirmarPago}
-                disabled={loading}
+                style={styles.checkRow}
+                onPress={() =>
+                  setSaveCard(!saveCard)
+                }
               >
                 <Ionicons
-                  name="checkmark-circle-outline"
-                  size={21}
-                  color="#FFFFFF"
+                  name={
+                    saveCard
+                      ? "checkbox"
+                      : "square-outline"
+                  }
+                  size={23}
+                  color={BLUE}
                 />
-                <Text style={styles.payText}>
-                  {loading
-                    ? "Procesando..."
-                    : "Confirmar pago simulado"}
+
+                <Text style={styles.checkText}>
+                  Guardar para futuros pagos
                 </Text>
               </TouchableOpacity>
 
-              <View style={styles.security}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={16}
-                  color="#64748B"
-                />
-                <Text style={styles.securityText}>
-                  No se realiza ningún cobro real
+              <TouchableOpacity
+                style={styles.primaryButton}
+                disabled={loading}
+                onPress={agregarTarjeta}
+              >
+                <Text style={styles.primaryText}>
+                  {loading
+                    ? "Guardando..."
+                    : "Guardar tarjeta"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* RESUMEN */}
+
+          {reserva && (
+            <View style={styles.panel}>
+              <Text style={styles.heading}>
+                Resumen del pago
+              </Text>
+
+              <Text style={styles.muted}>
+                Espacio {reserva.spaceId}
+              </Text>
+
+              <Text style={styles.muted}>
+                Duración: {reserva.hours} hora(s)
+              </Text>
+
+              <View style={styles.totalRow}>
+                <Text style={styles.optionTitle}>
+                  Total a pagar
+                </Text>
+
+                <Text style={styles.total}>
+                  Q{Number(reserva.amount).toFixed(2)}
                 </Text>
               </View>
+
+              <TouchableOpacity
+                style={styles.primaryButton}
+                disabled={loading}
+                onPress={confirmarPago}
+              >
+                <Text style={styles.primaryText}>
+                  {loading
+                    ? "Procesando..."
+                    : "Confirmar pago"}
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.footer}>
+                Pago simulado. No se realizan cobros reales.
+              </Text>
             </View>
-          </>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FB",
+    backgroundColor: "#F4F7FB",
   },
   content: {
-    padding: 20,
+    padding: 18,
     paddingBottom: 45,
   },
   title: {
     fontSize: 27,
     fontWeight: "800",
-    color: "#17243B",
+    color: "#1E293B",
   },
   subtitle: {
     fontSize: 14,
     color: "#64748B",
-    marginTop: 6,
-    marginBottom: 22,
+    marginTop: 5,
+    marginBottom: 20,
   },
-  card: {
+  panel: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    padding: 18,
-    marginBottom: 18,
-    elevation: 3,
+    padding: 17,
+    marginBottom: 17,
+    elevation: 2,
   },
-  sectionTitle: {
+  heading: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#17243B",
-    marginBottom: 15,
+    color: "#1E293B",
+    marginBottom: 14,
   },
-  reservation: {
+  muted: {
+    color: "#64748B",
+    fontSize: 13,
+    marginTop: 3,
+  },
+  option: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 10,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 12,
-    padding: 14,
+    padding: 13,
     marginBottom: 10,
   },
   selected: {
     borderColor: BLUE,
     backgroundColor: "#EFF6FF",
   },
-  reservationTitle: {
+  optionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  price: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#17243B",
-  },
-  muted: {
-    color: "#64748B",
-    fontSize: 13,
-  },
-  amount: {
     color: BLUE,
-    fontWeight: "800",
-    fontSize: 16,
   },
-  demoCard: {
-    backgroundColor: BLUE,
-    borderRadius: 18,
-    padding: 22,
-    marginBottom: 18,
-  },
-  demoHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  demoLabel: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  demoNumber: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    marginTop: 28,
-    marginBottom: 20,
-    letterSpacing: 2,
-  },
-  demoName: {
-    color: "#FFFFFF",
-    fontSize: 13,
-  },
-  warning: {
-    color: "#475569",
-    backgroundColor: "#EFF6FF",
+  cardRow: {
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
     padding: 12,
+    marginBottom: 10,
+  },
+  cardSelection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cardIcon: {
+    backgroundColor: "#EFF6FF",
     borderRadius: 10,
+    padding: 10,
+  },
+  defaultText: {
+    color: "#16A34A",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 18,
+    marginTop: 12,
+  },
+  actionText: {
+    color: BLUE,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  deleteText: {
+    color: "#DC2626",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 13,
+  },
+  addText: {
+    color: BLUE,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  demoNotice: {
+    flexDirection: "row",
+    gap: 8,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 10,
+    padding: 12,
     marginBottom: 18,
-    lineHeight: 21,
+  },
+  demoNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#475569",
   },
   label: {
     color: "#334155",
@@ -448,14 +914,31 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
   input: {
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#CBD5E1",
-    backgroundColor: "#F8FAFC",
     borderRadius: 10,
-    padding: 13,
+    padding: 12,
+    color: "#1E293B",
     fontSize: 15,
-    color: "#17243B",
-    marginBottom: 17,
+    marginBottom: 16,
+  },
+  inputIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  flexInput: {
+    flex: 1,
+    paddingVertical: 12,
+    color: "#1E293B",
+    fontSize: 15,
   },
   row: {
     flexDirection: "row",
@@ -464,55 +947,104 @@ const styles = StyleSheet.create({
   half: {
     flex: 1,
   },
-  summary: {
-    backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 18,
-    gap: 8,
+  demoHelp: {
+    color: "#64748B",
+    fontSize: 12,
+    lineHeight: 19,
+    marginBottom: 14,
   },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: "#CBD5E1",
-    paddingTop: 12,
-    marginTop: 5,
+  checkRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
   },
-  totalLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#17243B",
+  checkText: {
+    color: "#334155",
+    fontSize: 14,
   },
-  total: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: BLUE,
-  },
-  payButton: {
+  primaryButton: {
     backgroundColor: BLUE,
     borderRadius: 12,
     padding: 16,
-    flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    gap: 9,
+    marginTop: 8,
   },
-  payText: {
+  primaryText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
   },
-  security: {
+  totalRow: {
     flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 16,
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    paddingTop: 14,
+    marginTop: 14,
   },
-  securityText: {
+  total: {
+    fontSize: 21,
+    fontWeight: "800",
+    color: BLUE,
+  },
+  footer: {
+    textAlign: "center",
     color: "#64748B",
     fontSize: 12,
+    marginTop: 13,
   },
+
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#2563EB",
+  },
+
+  header: {
+    backgroundColor: "#2563EB",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 22,
+  },
+
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  headerText: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+
+  headerTitle: {
+    color: "#FFFFFF",
+    fontSize: 21,
+    fontWeight: "800",
+  },
+
+  headerSubtitle: {
+    color: "#DBEAFE",
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  container: {
+    flex: 1,
+    backgroundColor: "#F4F7FB",
+  },
+
+  content: {
+    padding: 18,
+    paddingBottom: 45,
+  },
+
 });
