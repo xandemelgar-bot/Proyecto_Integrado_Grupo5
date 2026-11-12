@@ -19,6 +19,7 @@ import {
 
 import { db } from "../services/firebase";
 import { useAuth } from "./AuthContext";
+import { socket, conectarSocket } from "../services/socket";
 
 const ParkingContext = createContext(null);
 
@@ -34,7 +35,10 @@ const initialSpaces = Array.from(
 export function ParkingProvider({ children }) {
   const { usuario, esAdmin } = useAuth();
 
-  const [spaces, setSpaces] = useState(initialSpaces);
+  const [firebaseSpaces, setFirebaseSpaces] = useState(initialSpaces);
+  const [sensorSpaces, setSensorSpaces] = useState({});
+  const [arduinoConnected, setArduinoConnected] = useState(false);
+  const [arduinoMode, setArduinoMode] = useState(null);
   const [reservations, setReservations] = useState([]);
   const [payments, setPayments] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -59,12 +63,12 @@ export function ParkingProvider({ children }) {
   };
 
   // =========================================
-  // SINCRONIZACIÓN DE ESPACIOS
+  // SINCRONIZACIÓN DE ESPACIOS CON FIREBASE
   // =========================================
 
   useEffect(() => {
     if (!usuario) {
-      setSpaces(initialSpaces);
+      setFirebaseSpaces(initialSpaces);
       setConnection(false);
       setParkingLoading(false);
       return;
@@ -83,7 +87,7 @@ export function ParkingProvider({ children }) {
           estados.set(Number(documento.id), data.estado);
         });
 
-        setSpaces(
+        setFirebaseSpaces(
           initialSpaces.map((space) => ({
             ...space,
             estado: estados.get(space.id) || "libre",
@@ -103,6 +107,151 @@ export function ParkingProvider({ children }) {
     return () => unsubscribe();
   }, [usuario?.uid]);
 
+  // =========================================
+  // SOCKET.IO - ARDUINO Y SIMULADOR
+  // =========================================
+
+  useEffect(() => {
+    if (!usuario?.uid) {
+      setSensorSpaces({});
+      setArduinoConnected(false);
+      setArduinoMode(null);
+      return;
+    }
+
+    const alConectar = () => {
+      setArduinoConnected(true);
+    };
+
+    const alDesconectar = () => {
+      setArduinoConnected(false);
+      setSensorSpaces({});
+    };
+
+    const alError = (error) => {
+      console.log(
+        "Error de conexión Socket.IO:",
+        error.message
+      );
+
+      setArduinoConnected(false);
+      setSensorSpaces({});
+    };
+
+    const guardarLectura = (space) => {
+      const id = Number(space?.id);
+
+      if (
+        !Number.isInteger(id) ||
+        id < 1 ||
+        id > 24
+      ) {
+        return;
+      }
+
+      if (
+        space.estado !== "libre" &&
+        space.estado !== "ocupado"
+      ) {
+        return;
+      }
+
+      setSensorSpaces((prev) => ({
+        ...prev,
+        [id]: space.estado,
+      }));
+    };
+
+    const alEstadoInicial = (data) => {
+      const lecturas = {};
+
+      if (Array.isArray(data?.spaces)) {
+        data.spaces.forEach((space) => {
+          const id = Number(space?.id);
+
+          if (
+            Number.isInteger(id) &&
+            id >= 1 &&
+            id <= 24 &&
+            (
+              space.estado === "libre" ||
+              space.estado === "ocupado"
+            )
+          ) {
+            lecturas[id] = space.estado;
+          }
+        });
+      }
+
+      setSensorSpaces(lecturas);
+      setArduinoMode(data?.mode ?? null);
+    };
+
+    socket.on("connect", alConectar);
+    socket.on("disconnect", alDesconectar);
+    socket.on("connect_error", alError);
+
+    socket.on(
+      "parking:initialState",
+      alEstadoInicial
+    );
+
+    socket.on(
+      "parking:spaceUpdate",
+      guardarLectura
+    );
+
+    if (socket.connected) {
+      alConectar();
+    }
+
+    conectarSocket();
+
+    return () => {
+      socket.off("connect", alConectar);
+      socket.off("disconnect", alDesconectar);
+      socket.off("connect_error", alError);
+
+      socket.off(
+        "parking:initialState",
+        alEstadoInicial
+      );
+
+      socket.off(
+        "parking:spaceUpdate",
+        guardarLectura
+      );
+
+      socket.disconnect();
+    };
+  }, [usuario?.uid]);
+
+  // =========================================
+  // COMBINAR FIREBASE Y SENSORES
+  // =========================================
+
+  // Una reserva tiene prioridad visual.
+  // Los datos del simulador no se guardan
+  // en Firestore.
+
+  const spaces = useMemo(
+    () =>
+      firebaseSpaces.map((space) => ({
+        ...space,
+        estado:
+          space.estado === "reservado"
+            ? "reservado"
+            : arduinoConnected &&
+                sensorSpaces[space.id]
+              ? sensorSpaces[space.id]
+              : space.estado,
+      })),
+    [
+      firebaseSpaces,
+      sensorSpaces,
+      arduinoConnected,
+    ]
+  );
 
   // =========================================
   // SINCRONIZACIÓN DE PAGOS
@@ -118,29 +267,34 @@ export function ParkingProvider({ children }) {
     const consulta = esAdmin
       ? query(referencia)
       : query(
-        referencia,
-        where("userId", "==", usuario.uid)
-      );
+          referencia,
+          where("userId", "==", usuario.uid)
+        );
 
     const unsubscribe = onSnapshot(
       consulta,
       (snapshot) => {
-        const lista = snapshot.docs.map((documento) => ({
-          id: documento.id,
-          ...documento.data(),
-        }));
+        const lista = snapshot.docs.map(
+          (documento) => ({
+            id: documento.id,
+            ...documento.data(),
+          })
+        );
 
         setPayments(lista);
       },
       (error) => {
-        console.log("Error al cargar pagos:", error);
+        console.log(
+          "Error al cargar pagos:",
+          error
+        );
+
         setPayments([]);
       }
     );
 
     return () => unsubscribe();
   }, [usuario?.uid, esAdmin]);
-
 
   // =========================================
   // SINCRONIZACIÓN DE RESERVAS
@@ -152,24 +306,27 @@ export function ParkingProvider({ children }) {
 
     if (!usuario) return;
 
-    const referencia = collection(db, "reservaciones");
+    const referencia = collection(
+      db,
+      "reservaciones"
+    );
 
-    // Administrador: todas las reservas
-    // Conductor: únicamente las propias
     const consulta = esAdmin
       ? query(referencia)
       : query(
-        referencia,
-        where("userId", "==", usuario.uid)
-      );
+          referencia,
+          where("userId", "==", usuario.uid)
+        );
 
     const unsubscribe = onSnapshot(
       consulta,
       (snapshot) => {
-        const lista = snapshot.docs.map((documento) => ({
-          id: documento.id,
-          ...documento.data(),
-        }));
+        const lista = snapshot.docs.map(
+          (documento) => ({
+            id: documento.id,
+            ...documento.data(),
+          })
+        );
 
         lista.sort(
           (a, b) =>
@@ -180,7 +337,11 @@ export function ParkingProvider({ children }) {
         setReservations(lista);
       },
       (error) => {
-        console.log("Error al cargar reservas:", error);
+        console.log(
+          "Error al cargar reservas:",
+          error
+        );
+
         setReservations([]);
       }
     );
@@ -192,7 +353,10 @@ export function ParkingProvider({ children }) {
   // CREAR RESERVA
   // =========================================
 
-  const reserve = async (spaceId, hours = 1) => {
+  const reserve = async (
+    spaceId,
+    hours = 1
+  ) => {
     if (!usuario) {
       return {
         ok: false,
@@ -203,7 +367,8 @@ export function ParkingProvider({ children }) {
     if (!connection) {
       return {
         ok: false,
-        message: "No hay conexión con el estacionamiento.",
+        message:
+          "No hay conexión con el estacionamiento.",
       };
     }
 
@@ -220,12 +385,20 @@ export function ParkingProvider({ children }) {
     ) {
       return {
         ok: false,
-        message: "Espacio o duración inválidos.",
+        message:
+          "Espacio o duración inválidos.",
       };
     }
 
-    const espacioRef = doc(db, "espacios", String(id));
-    const reservaRef = doc(collection(db, "reservaciones"));
+    const espacioRef = doc(
+      db,
+      "espacios",
+      String(id)
+    );
+
+    const reservaRef = doc(
+      collection(db, "reservaciones")
+    );
 
     const importe = Math.max(
       tariff.minimum,
@@ -236,14 +409,17 @@ export function ParkingProvider({ children }) {
       const resultado = await runTransaction(
         db,
         async (transaction) => {
-          const espacioDoc = await transaction.get(espacioRef);
+          const espacioDoc =
+            await transaction.get(espacioRef);
 
           const estado = espacioDoc.exists()
             ? espacioDoc.data().estado
             : "libre";
 
           if (estado !== "libre") {
-            throw new Error("Espacio no disponible.");
+            throw new Error(
+              "Espacio no disponible."
+            );
           }
 
           const reserva = {
@@ -263,7 +439,10 @@ export function ParkingProvider({ children }) {
             reservationId: reservaRef.id,
           });
 
-          transaction.set(reservaRef, reserva);
+          transaction.set(
+            reservaRef,
+            reserva
+          );
 
           return {
             id: reservaRef.id,
@@ -272,19 +451,25 @@ export function ParkingProvider({ children }) {
         }
       );
 
-      notify(`Reserva creada para el espacio ${id}`);
+      notify(
+        `Reserva creada para el espacio ${id}`
+      );
 
       return {
         ok: true,
         reservation: resultado,
       };
     } catch (error) {
-      console.log("Error al reservar:", error);
+      console.log(
+        "Error al reservar:",
+        error
+      );
 
       return {
         ok: false,
         message:
-          error.message || "No se pudo crear la reserva.",
+          error.message ||
+          "No se pudo crear la reserva.",
       };
     }
   };
@@ -294,18 +479,27 @@ export function ParkingProvider({ children }) {
   // =========================================
 
   const cancelReservation = async (id) => {
-    if (!usuario || !connection) return false;
+    if (!usuario || !connection) {
+      return false;
+    }
 
-    const reservaRef = doc(db, "reservaciones", String(id));
+    const reservaRef = doc(
+      db,
+      "reservaciones",
+      String(id)
+    );
 
     try {
       const espacioId = await runTransaction(
         db,
         async (transaction) => {
-          const reservaDoc = await transaction.get(reservaRef);
+          const reservaDoc =
+            await transaction.get(reservaRef);
 
           if (!reservaDoc.exists()) {
-            throw new Error("La reserva no existe.");
+            throw new Error(
+              "La reserva no existe."
+            );
           }
 
           const reserva = reservaDoc.data();
@@ -320,7 +514,9 @@ export function ParkingProvider({ children }) {
           }
 
           if (reserva.status !== "activa") {
-            throw new Error("La reserva ya no está activa.");
+            throw new Error(
+              "La reserva ya no está activa."
+            );
           }
 
           const espacioRef = doc(
@@ -329,7 +525,8 @@ export function ParkingProvider({ children }) {
             String(reserva.spaceId)
           );
 
-          const espacioDoc = await transaction.get(espacioRef);
+          const espacioDoc =
+            await transaction.get(espacioRef);
 
           if (
             !espacioDoc.exists() ||
@@ -354,25 +551,32 @@ export function ParkingProvider({ children }) {
         }
       );
 
-      notify(`Reserva cancelada: espacio ${espacioId}`);
+      notify(
+        `Reserva cancelada: espacio ${espacioId}`
+      );
+
       return true;
     } catch (error) {
-      console.log("Error al cancelar:", error);
+      console.log(
+        "Error al cancelar:",
+        error
+      );
+
       return false;
     }
   };
-
-  // =========================================
-  // PAGOS SIMULADOS
-  // =========================================
-
 
   // =========================================
   // PAGOS SIMULADOS CON FIREBASE
   // =========================================
 
   const pay = async (id) => {
-    if (!usuario?.uid) return false;
+    if (!usuario?.uid) {
+      return {
+        ok: false,
+        message: "Debes iniciar sesión.",
+      };
+    }
 
     const reservaRef = doc(
       db,
@@ -380,8 +584,6 @@ export function ParkingProvider({ children }) {
       String(id)
     );
 
-    // Un documento por reserva impide
-    // registrar dos pagos para la misma reserva.
     const pagoRef = doc(
       db,
       "pagos",
@@ -399,18 +601,24 @@ export function ParkingProvider({ children }) {
             await transaction.get(pagoRef);
 
           if (!reservaDoc.exists()) {
-            throw new Error("La reserva no existe.");
+            throw new Error(
+              "La reserva no existe."
+            );
           }
 
           const reserva = reservaDoc.data();
 
-          if (reserva.userId !== usuario.uid) {
+          if (
+            reserva.userId !== usuario.uid
+          ) {
             throw new Error(
               "Esta reserva no pertenece a tu cuenta."
             );
           }
 
-          if (reserva.status !== "activa") {
+          if (
+            reserva.status !== "activa"
+          ) {
             throw new Error(
               "La reserva no está activa."
             );
@@ -422,13 +630,17 @@ export function ParkingProvider({ children }) {
             );
           }
 
-          const importe = Number(reserva.amount);
+          const importe = Number(
+            reserva.amount
+          );
 
           if (
             !Number.isFinite(importe) ||
             importe <= 0
           ) {
-            throw new Error("Importe inválido.");
+            throw new Error(
+              "Importe inválido."
+            );
           }
 
           transaction.set(pagoRef, {
@@ -454,28 +666,37 @@ export function ParkingProvider({ children }) {
         ok: true,
       };
     } catch (error) {
-      console.error("ERROR AL PROCESAR PAGO:", {
-        code: error.code,
-        message: error.message,
-        reservationId: id,
-        userId: usuario?.uid,
-      });
+      console.error(
+        "ERROR AL PROCESAR PAGO:",
+        {
+          code: error.code,
+          message: error.message,
+          reservationId: id,
+          userId: usuario?.uid,
+        }
+      );
 
       return {
         ok: false,
-        message: error.message || "Error desconocido",
+        message:
+          error.message ||
+          "Error desconocido",
       };
     }
-  }
-
+  };
 
   // =========================================
   // CAMBIAR ESTADO DE ESPACIO
   // SOLO ADMINISTRADOR
   // =========================================
 
-  const setSpaceStatus = async (id, estado) => {
-    if (!esAdmin || !connection) return false;
+  const setSpaceStatus = async (
+    id,
+    estado
+  ) => {
+    if (!esAdmin || !connection) {
+      return false;
+    }
 
     const numero = Number(id);
 
@@ -495,28 +716,38 @@ export function ParkingProvider({ children }) {
     );
 
     try {
-      await runTransaction(db, async (transaction) => {
-        const espacioDoc = await transaction.get(espacioRef);
+      await runTransaction(
+        db,
+        async (transaction) => {
+          const espacioDoc =
+            await transaction.get(espacioRef);
 
-        if (
-          espacioDoc.exists() &&
-          espacioDoc.data().estado === "reservado"
-        ) {
-          throw new Error(
-            "No puedes modificar un espacio reservado."
-          );
+          if (
+            espacioDoc.exists() &&
+            espacioDoc.data().estado ===
+              "reservado"
+          ) {
+            throw new Error(
+              "No puedes modificar un espacio reservado."
+            );
+          }
+
+          transaction.set(espacioRef, {
+            nivel:
+              numero <= 12 ? 1 : 2,
+            estado,
+            reservationId: null,
+          });
         }
-
-        transaction.set(espacioRef, {
-          nivel: numero <= 12 ? 1 : 2,
-          estado,
-          reservationId: null,
-        });
-      });
+      );
 
       return true;
     } catch (error) {
-      console.log("Error al cambiar espacio:", error);
+      console.log(
+        "Error al cambiar espacio:",
+        error
+      );
+
       return false;
     }
   };
@@ -533,31 +764,45 @@ export function ParkingProvider({ children }) {
   // ESTADÍSTICAS
   // =========================================
 
-  const stats = useMemo(() => ({
-    free: spaces.filter(
-      (s) => s.estado === "libre"
-    ).length,
+  const stats = useMemo(
+    () => ({
+      free: spaces.filter(
+        (s) => s.estado === "libre"
+      ).length,
 
-    occupied: spaces.filter(
-      (s) => s.estado === "ocupado"
-    ).length,
+      occupied: spaces.filter(
+        (s) => s.estado === "ocupado"
+      ).length,
 
-    reserved: spaces.filter(
-      (s) => s.estado === "reservado"
-    ).length,
+      reserved: spaces.filter(
+        (s) => s.estado === "reservado"
+      ).length,
 
-    income: payments
-      .filter((p) => p.status === "completado")
-      .reduce(
-        (total, p) => total + Number(p.amount || 0),
-        0
-      ),
-  }), [spaces, payments]);
+      income: payments
+        .filter(
+          (p) =>
+            p.status === "completado"
+        )
+        .reduce(
+          (total, p) =>
+            total +
+            Number(p.amount || 0),
+          0
+        ),
+    }),
+    [spaces, payments]
+  );
+
+  // =========================================
+  // PROVEEDOR
+  // =========================================
 
   return (
     <ParkingContext.Provider
       value={{
         spaces,
+        arduinoConnected,
+        arduinoMode,
         reservations,
         payments,
         notifications,
@@ -579,10 +824,14 @@ export function ParkingProvider({ children }) {
 }
 
 export function useParking() {
-  const context = useContext(ParkingContext);
+  const context = useContext(
+    ParkingContext
+  );
 
   if (!context) {
-    throw new Error("Falta ParkingProvider");
+    throw new Error(
+      "Falta ParkingProvider"
+    );
   }
 
   return context;
