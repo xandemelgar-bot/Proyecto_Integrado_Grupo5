@@ -455,673 +455,674 @@ export default function PaymentScreen({ navigation, route }) {
     try {
       setLoading(true);
 
+
       const resultado = await pay(reserva.id);
 
-      if (resultado) {
-        setSelectedReservation(null);
-
+      if (!resultado.ok) {
         Alert.alert(
-          "Pago completado",
-          "Tu pago simulado se registró correctamente."
+          "No se pudo completar el pago",
+          resultado.message ||
+          "Ocurrió un error al procesar el pago."
         );
-      } else {
-        Alert.alert(
-          "Error",
-          "No se pudo completar el pago."
-        );
+        return;
       }
-    } catch (error) {
-      console.log(error);
 
       Alert.alert(
-        "Error",
-        "Ocurrió un problema con el pago."
+        "Pago realizado",
+        "Tu pago simulado se registró correctamente."
       );
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch (error) {
+    console.log(error);
 
-  // ==========================================
-  // INTERFAZ
-  // ==========================================
+    Alert.alert(
+      "Error",
+      "Ocurrió un problema con el pago."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
-  return (
-    <SafeAreaView
-      style={s.safe}
-      edges={["top", "bottom"]}
+// ==========================================
+// INTERFAZ
+// ==========================================
+
+return (
+  <SafeAreaView
+    style={s.safe}
+    edges={["top", "bottom"]}
+  >
+    <StatusBar
+      barStyle="light-content"
+      backgroundColor="#0754BD"
+    />
+
+    <KeyboardAvoidingView
+      style={s.container}
+      behavior={
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
+      }
     >
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="#0754BD"
-      />
-
-      <KeyboardAvoidingView
-        style={s.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+      <ScrollView
+        contentContainerStyle={s.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={s.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* ==================================
+        {/* ==================================
               ENCABEZADO
           ================================== */}
 
-          <LinearGradient
-            colors={[
-              "#0648AE",
-              "#0964D5",
-              "#328FF4"
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.hero}
-          >
-            <View style={s.circleOne} />
-            <View style={s.circleTwo} />
+        <LinearGradient
+          colors={[
+            "#0648AE",
+            "#0964D5",
+            "#328FF4"
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.hero}
+        >
+          <View style={s.circleOne} />
+          <View style={s.circleTwo} />
 
-            <View style={s.headerRow}>
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={s.backButton}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={24}
-                  color="#FFFFFF"
-                />
-              </TouchableOpacity>
-
-              <View style={s.headerText}>
-                <Text style={s.headerTitle}>
-                  Métodos de pago
-                </Text>
-
-                <Text style={s.headerSubtitle}>
-                  Administra tus tarjetas y pagos
-                </Text>
-              </View>
-
-              <View style={s.heroIcon}>
-                <Ionicons
-                  name="card-outline"
-                  size={27}
-                  color="#FFFFFF"
-                />
-              </View>
-            </View>
-
-            <View style={s.heroDescription}>
+          <View style={s.headerRow}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={s.backButton}
+              activeOpacity={0.8}
+            >
               <Ionicons
-                name="shield-checkmark-outline"
-                size={22}
+                name="arrow-back"
+                size={24}
                 color="#FFFFFF"
               />
+            </TouchableOpacity>
 
-              <Text style={s.heroDescriptionText}>
-                Gestiona tus métodos de pago
-                y reservaciones pendientes.
+            <View style={s.headerText}>
+              <Text style={s.headerTitle}>
+                Métodos de pago
+              </Text>
+
+              <Text style={s.headerSubtitle}>
+                Administra tus tarjetas y pagos
               </Text>
             </View>
 
-            <View
-              style={s.headerWave}
-              pointerEvents="none"
-            >
-              <Svg
-                width="100%"
-                height="100%"
-                viewBox="0 0 400 80"
-                preserveAspectRatio="none"
-              >
-                <Path
-                  d="M0 30 C120 85 250 0 400 35 L400 80 L0 80 Z"
-                  fill="#8DC4FF"
-                  opacity={0.55}
-                />
-                <Path
-                  d="M0 55 C140 10 265 95 400 40 L400 80 L0 80 Z"
-                  fill="#EAF4FF"
-                  opacity={0.95}
-                />
-              </Svg>
-            </View>
-          </LinearGradient>
-
-          <View style={s.content}>
-            {/* ==================================
-                RESERVAS PENDIENTES
-            ================================== */}
-
-            <View style={s.panel}>
-              <SectionTitle
-                icon="calendar-outline"
-                title="Reservas pendientes"
-                subtitle="Selecciona la reserva que deseas pagar"
+            <View style={s.heroIcon}>
+              <Ionicons
+                name="card-outline"
+                size={27}
+                color="#FFFFFF"
               />
-
-              {pendientes.length === 0 ? (
-                <View style={s.emptyBox}>
-                  <Ionicons
-                    name="checkmark-circle-outline"
-                    size={30}
-                    color="#16A34A"
-                  />
-
-                  <Text style={s.emptyText}>
-                    No tienes pagos pendientes.
-                  </Text>
-                </View>
-              ) : (
-                pendientes.map(r => {
-                  const selected =
-                    selectedReservation === r.id;
-
-                  return (
-                    <TouchableOpacity
-                      key={r.id}
-                      onPress={() =>
-                        setSelectedReservation(r.id)
-                      }
-                      activeOpacity={0.8}
-                      style={[
-                        s.reservationOption,
-                        selected && s.optionSelected
-                      ]}
-                    >
-                      <View style={s.reservationIcon}>
-                        <Ionicons
-                          name="car-sport"
-                          size={25}
-                          color={BLUE}
-                        />
-                      </View>
-
-                      <View style={s.optionInfo}>
-                        <Text style={s.optionTitle}>
-                          Espacio {r.spaceId}
-                        </Text>
-
-                        <Text style={s.optionSubtitle}>
-                          {r.hours} hora(s)
-                        </Text>
-                      </View>
-
-                      <View style={s.optionRight}>
-                        <Text style={s.price}>
-                          Q{Number(r.amount).toFixed(2)}
-                        </Text>
-
-                        <Ionicons
-                          name={
-                            selected
-                              ? "radio-button-on"
-                              : "radio-button-off"
-                          }
-                          size={22}
-                          color={BLUE}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
             </View>
-
-            {/* ==================================
-                TARJETAS GUARDADAS
-            ================================== */}
-
-            <View style={s.panel}>
-              <SectionTitle
-                icon="wallet-outline"
-                title="Mis tarjetas"
-                subtitle="Métodos de pago de tu cuenta"
-              />
-
-              {loadingCards ? (
-                <ActivityIndicator
-                  color={BLUE}
-                  style={{ marginVertical: 20 }}
-                />
-              ) : cards.length === 0 ? (
-                <View style={s.emptyBox}>
-                  <Ionicons
-                    name="card-outline"
-                    size={31}
-                    color="#8BA9D0"
-                  />
-
-                  <Text style={s.emptyText}>
-                    Todavía no tienes tarjetas guardadas.
-                  </Text>
-                </View>
-              ) : (
-                cards.map(card => {
-                  const selected =
-                    selectedCard === card.id;
-
-                  return (
-                    <View
-                      key={card.id}
-                      style={[
-                        s.savedCard,
-                        selected && s.savedCardSelected
-                      ]}
-                    >
-                      <TouchableOpacity
-                        style={s.cardSelection}
-                        onPress={() =>
-                          setSelectedCard(card.id)
-                        }
-                        activeOpacity={0.8}
-                      >
-                        <LinearGradient
-                          colors={[
-                            "#1673E8",
-                            "#0754C9"
-                          ]}
-                          style={s.cardIcon}
-                        >
-                          <Ionicons
-                            name="card-outline"
-                            size={24}
-                            color="#FFFFFF"
-                          />
-                        </LinearGradient>
-
-                        <View style={s.optionInfo}>
-                          <Text style={s.optionTitle}>
-                            {card.alias} •••• {card.ultimos4}
-                          </Text>
-
-                          <Text style={s.optionSubtitle}>
-                            Vence {card.vencimiento}
-                          </Text>
-
-                          {card.predeterminada && (
-                            <View style={s.defaultBadge}>
-                              <Ionicons
-                                name="checkmark-circle"
-                                size={13}
-                                color="#15803D"
-                              />
-                              <Text style={s.defaultText}>
-                                Predeterminada
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-
-                        <Ionicons
-                          name={
-                            selected
-                              ? "radio-button-on"
-                              : "radio-button-off"
-                          }
-                          size={23}
-                          color={BLUE}
-                        />
-                      </TouchableOpacity>
-
-                      <View style={s.cardActions}>
-                        {!card.predeterminada && (
-                          <TouchableOpacity
-                            disabled={loading}
-                            onPress={() =>
-                              establecerPredeterminada(card.id)
-                            }
-                            style={s.defaultAction}
-                          >
-                            <Ionicons
-                              name="star-outline"
-                              size={16}
-                              color={BLUE}
-                            />
-                            <Text style={s.defaultActionText}>
-                              Predeterminada
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-
-                        <TouchableOpacity
-                          disabled={loading}
-                          onPress={() =>
-                            eliminarTarjeta(card)
-                          }
-                          style={s.deleteAction}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={16}
-                            color="#DC2626"
-                          />
-                          <Text style={s.deleteActionText}>
-                            Eliminar
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-
-              {/* AGREGAR TARJETA */}
-
-              <TouchableOpacity
-                onPress={() =>
-                  setShowForm(!showForm)
-                }
-                activeOpacity={0.8}
-                style={s.addButton}
-              >
-                <Ionicons
-                  name={
-                    showForm
-                      ? "close-circle-outline"
-                      : "add-circle-outline"
-                  }
-                  size={23}
-                  color={BLUE}
-                />
-
-                <Text style={s.addText}>
-                  {showForm
-                    ? "Cancelar"
-                    : "Agregar tarjeta"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* ==================================
-                FORMULARIO DE TARJETA
-            ================================== */}
-
-            {showForm && (
-              <View style={s.panel}>
-                <SectionTitle
-                  icon="add-circle-outline"
-                  title="Agregar tarjeta"
-                  subtitle="Introduce los datos de demostración"
-                />
-
-                <View style={s.demoNotice}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={21}
-                    color={BLUE}
-                  />
-
-                  <Text style={s.demoNoticeText}>
-                    Esta pantalla es una simulación.
-                    No ingreses datos de tarjetas reales.
-                  </Text>
-                </View>
-
-                <Text style={s.label}>
-                  Número de tarjeta
-                </Text>
-
-                <View style={s.inputIcon}>
-                  <Ionicons
-                    name="card-outline"
-                    size={22}
-                    color="#6486B3"
-                  />
-
-                  <TextInput
-                    style={s.flexInput}
-                    placeholder="0000 0000 0000 0000"
-                    placeholderTextColor="#9BB0CA"
-                    keyboardType="number-pad"
-                    value={numero}
-                    onChangeText={formatNumero}
-                    maxLength={19}
-                  />
-                </View>
-
-                <Text style={s.label}>
-                  Nombre del titular
-                </Text>
-
-                <View style={s.inputIcon}>
-                  <Ionicons
-                    name="person-outline"
-                    size={21}
-                    color="#6486B3"
-                  />
-
-                  <TextInput
-                    style={s.flexInput}
-                    placeholder="Como aparece en la tarjeta"
-                    placeholderTextColor="#9BB0CA"
-                    autoCapitalize="characters"
-                    value={titular}
-                    onChangeText={setTitular}
-                    maxLength={60}
-                  />
-                </View>
-
-                <View style={s.formRow}>
-                  <View style={s.half}>
-                    <Text style={s.label}>
-                      Vencimiento
-                    </Text>
-
-                    <View style={s.inputIcon}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={18}
-                        color="#6486B3"
-                      />
-
-                      <TextInput
-                        style={s.flexInput}
-                        placeholder="MM/AA"
-                        placeholderTextColor="#9BB0CA"
-                        keyboardType="number-pad"
-                        value={vencimiento}
-                        onChangeText={formatFecha}
-                        maxLength={5}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={s.half}>
-                    <Text style={s.label}>
-                      CVV
-                    </Text>
-
-                    <View style={s.inputIcon}>
-                      <Ionicons
-                        name="lock-closed-outline"
-                        size={18}
-                        color="#6486B3"
-                      />
-
-                      <TextInput
-                        style={s.flexInput}
-                        placeholder="•••"
-                        placeholderTextColor="#9BB0CA"
-                        keyboardType="number-pad"
-                        secureTextEntry
-                        value={cvv}
-                        onChangeText={value =>
-                          setCvv(
-                            value
-                              .replace(/\D/g, "")
-                              .slice(0, 3)
-                          )
-                        }
-                        maxLength={3}
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={s.checkRow}
-                  onPress={() =>
-                    setSaveCard(!saveCard)
-                  }
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name={
-                      saveCard
-                        ? "checkbox"
-                        : "square-outline"
-                    }
-                    size={23}
-                    color={BLUE}
-                  />
-
-                  <Text style={s.checkText}>
-                    Guardar para futuros pagos
-                  </Text>
-                </TouchableOpacity>
-
-                <PrimaryButton
-                  title={
-                    saveCard
-                      ? "Guardar tarjeta"
-                      : "Validar tarjeta"
-                  }
-                  icon="checkmark-circle-outline"
-                  onPress={agregarTarjeta}
-                  disabled={loading}
-                  loading={loading}
-                />
-              </View>
-            )}
-
-            {/* ==================================
-                RESUMEN DEL PAGO
-            ================================== */}
-
-            {reserva && (
-              <View style={s.panel}>
-                <SectionTitle
-                  icon="receipt-outline"
-                  title="Resumen del pago"
-                  subtitle="Revisa tu reservación"
-                />
-
-                <View style={s.summaryRow}>
-                  <Text style={s.summaryLabel}>
-                    Espacio
-                  </Text>
-
-                  <Text style={s.summaryValue}>
-                    {reserva.spaceId}
-                  </Text>
-                </View>
-
-                <View style={s.summaryRow}>
-                  <Text style={s.summaryLabel}>
-                    Duración
-                  </Text>
-
-                  <Text style={s.summaryValue}>
-                    {reserva.hours} hora(s)
-                  </Text>
-                </View>
-
-                <LinearGradient
-                  colors={[
-                    "#EAF4FF",
-                    "#DCEBFF"
-                  ]}
-                  style={s.totalBox}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.totalLabel}>
-                      Total a pagar
-                    </Text>
-
-                    <Text style={s.totalHint}>
-                      Importe de la reserva
-                    </Text>
-                  </View>
-
-                  <Text style={s.totalAmount}>
-                    Q{Number(reserva.amount).toFixed(2)}
-                  </Text>
-                </LinearGradient>
-
-                <PrimaryButton
-                  title="Confirmar pago"
-                  icon="shield-checkmark-outline"
-                  onPress={confirmarPago}
-                  disabled={
-                    loading ||
-                    !cards.some(
-                      c => c.id === selectedCard
-                    )
-                  }
-                  loading={loading}
-                />
-
-                <View style={s.footerNotice}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={17}
-                    color="#7891B1"
-                  />
-
-                  <Text style={s.footerText}>
-                    Pago simulado. No se realizan
-                    cobros reales.
-                  </Text>
-                </View>
-              </View>
-            )}
           </View>
 
-          {/* ==================================
-              ONDAS INFERIORES
-          ================================== */}
+          <View style={s.heroDescription}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={22}
+              color="#FFFFFF"
+            />
+
+            <Text style={s.heroDescriptionText}>
+              Gestiona tus métodos de pago
+              y reservaciones pendientes.
+            </Text>
+          </View>
 
           <View
-            style={s.bottomWaves}
+            style={s.headerWave}
             pointerEvents="none"
           >
             <Svg
               width="100%"
               height="100%"
-              viewBox="0 0 400 110"
+              viewBox="0 0 400 80"
               preserveAspectRatio="none"
             >
               <Path
-                d="M0 35 C100 0 220 110 400 35 L400 110 L0 110 Z"
-                fill="#B8D9FF"
-                opacity={0.8}
+                d="M0 30 C120 85 250 0 400 35 L400 80 L0 80 Z"
+                fill="#8DC4FF"
+                opacity={0.55}
               />
-
               <Path
-                d="M0 70 C135 15 255 135 400 50 L400 110 L0 110 Z"
-                fill="#7DBAFF"
-                opacity={0.8}
-              />
-
-              <Path
-                d="M0 100 C130 55 250 135 400 75 L400 110 L0 110 Z"
-                fill="#459AF5"
-                opacity={0.75}
+                d="M0 55 C140 10 265 95 400 40 L400 80 L0 80 Z"
+                fill="#EAF4FF"
+                opacity={0.95}
               />
             </Svg>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+        </LinearGradient>
+
+        <View style={s.content}>
+          {/* ==================================
+                RESERVAS PENDIENTES
+            ================================== */}
+
+          <View style={s.panel}>
+            <SectionTitle
+              icon="calendar-outline"
+              title="Reservas pendientes"
+              subtitle="Selecciona la reserva que deseas pagar"
+            />
+
+            {pendientes.length === 0 ? (
+              <View style={s.emptyBox}>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={30}
+                  color="#16A34A"
+                />
+
+                <Text style={s.emptyText}>
+                  No tienes pagos pendientes.
+                </Text>
+              </View>
+            ) : (
+              pendientes.map(r => {
+                const selected =
+                  selectedReservation === r.id;
+
+                return (
+                  <TouchableOpacity
+                    key={r.id}
+                    onPress={() =>
+                      setSelectedReservation(r.id)
+                    }
+                    activeOpacity={0.8}
+                    style={[
+                      s.reservationOption,
+                      selected && s.optionSelected
+                    ]}
+                  >
+                    <View style={s.reservationIcon}>
+                      <Ionicons
+                        name="car-sport"
+                        size={25}
+                        color={BLUE}
+                      />
+                    </View>
+
+                    <View style={s.optionInfo}>
+                      <Text style={s.optionTitle}>
+                        Espacio {r.spaceId}
+                      </Text>
+
+                      <Text style={s.optionSubtitle}>
+                        {r.hours} hora(s)
+                      </Text>
+                    </View>
+
+                    <View style={s.optionRight}>
+                      <Text style={s.price}>
+                        Q{Number(r.amount).toFixed(2)}
+                      </Text>
+
+                      <Ionicons
+                        name={
+                          selected
+                            ? "radio-button-on"
+                            : "radio-button-off"
+                        }
+                        size={22}
+                        color={BLUE}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+
+          {/* ==================================
+                TARJETAS GUARDADAS
+            ================================== */}
+
+          <View style={s.panel}>
+            <SectionTitle
+              icon="wallet-outline"
+              title="Mis tarjetas"
+              subtitle="Métodos de pago de tu cuenta"
+            />
+
+            {loadingCards ? (
+              <ActivityIndicator
+                color={BLUE}
+                style={{ marginVertical: 20 }}
+              />
+            ) : cards.length === 0 ? (
+              <View style={s.emptyBox}>
+                <Ionicons
+                  name="card-outline"
+                  size={31}
+                  color="#8BA9D0"
+                />
+
+                <Text style={s.emptyText}>
+                  Todavía no tienes tarjetas guardadas.
+                </Text>
+              </View>
+            ) : (
+              cards.map(card => {
+                const selected =
+                  selectedCard === card.id;
+
+                return (
+                  <View
+                    key={card.id}
+                    style={[
+                      s.savedCard,
+                      selected && s.savedCardSelected
+                    ]}
+                  >
+                    <TouchableOpacity
+                      style={s.cardSelection}
+                      onPress={() =>
+                        setSelectedCard(card.id)
+                      }
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={[
+                          "#1673E8",
+                          "#0754C9"
+                        ]}
+                        style={s.cardIcon}
+                      >
+                        <Ionicons
+                          name="card-outline"
+                          size={24}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+
+                      <View style={s.optionInfo}>
+                        <Text style={s.optionTitle}>
+                          {card.alias} •••• {card.ultimos4}
+                        </Text>
+
+                        <Text style={s.optionSubtitle}>
+                          Vence {card.vencimiento}
+                        </Text>
+
+                        {card.predeterminada && (
+                          <View style={s.defaultBadge}>
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={13}
+                              color="#15803D"
+                            />
+                            <Text style={s.defaultText}>
+                              Predeterminada
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <Ionicons
+                        name={
+                          selected
+                            ? "radio-button-on"
+                            : "radio-button-off"
+                        }
+                        size={23}
+                        color={BLUE}
+                      />
+                    </TouchableOpacity>
+
+                    <View style={s.cardActions}>
+                      {!card.predeterminada && (
+                        <TouchableOpacity
+                          disabled={loading}
+                          onPress={() =>
+                            establecerPredeterminada(card.id)
+                          }
+                          style={s.defaultAction}
+                        >
+                          <Ionicons
+                            name="star-outline"
+                            size={16}
+                            color={BLUE}
+                          />
+                          <Text style={s.defaultActionText}>
+                            Predeterminada
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        disabled={loading}
+                        onPress={() =>
+                          eliminarTarjeta(card)
+                        }
+                        style={s.deleteAction}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={16}
+                          color="#DC2626"
+                        />
+                        <Text style={s.deleteActionText}>
+                          Eliminar
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+
+            {/* AGREGAR TARJETA */}
+
+            <TouchableOpacity
+              onPress={() =>
+                setShowForm(!showForm)
+              }
+              activeOpacity={0.8}
+              style={s.addButton}
+            >
+              <Ionicons
+                name={
+                  showForm
+                    ? "close-circle-outline"
+                    : "add-circle-outline"
+                }
+                size={23}
+                color={BLUE}
+              />
+
+              <Text style={s.addText}>
+                {showForm
+                  ? "Cancelar"
+                  : "Agregar tarjeta"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ==================================
+                FORMULARIO DE TARJETA
+            ================================== */}
+
+          {showForm && (
+            <View style={s.panel}>
+              <SectionTitle
+                icon="add-circle-outline"
+                title="Agregar tarjeta"
+                subtitle="Introduce los datos de demostración"
+              />
+
+              <View style={s.demoNotice}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={21}
+                  color={BLUE}
+                />
+
+                <Text style={s.demoNoticeText}>
+                  Esta pantalla es una simulación.
+                  No ingreses datos de tarjetas reales.
+                </Text>
+              </View>
+
+              <Text style={s.label}>
+                Número de tarjeta
+              </Text>
+
+              <View style={s.inputIcon}>
+                <Ionicons
+                  name="card-outline"
+                  size={22}
+                  color="#6486B3"
+                />
+
+                <TextInput
+                  style={s.flexInput}
+                  placeholder="0000 0000 0000 0000"
+                  placeholderTextColor="#9BB0CA"
+                  keyboardType="number-pad"
+                  value={numero}
+                  onChangeText={formatNumero}
+                  maxLength={19}
+                />
+              </View>
+
+              <Text style={s.label}>
+                Nombre del titular
+              </Text>
+
+              <View style={s.inputIcon}>
+                <Ionicons
+                  name="person-outline"
+                  size={21}
+                  color="#6486B3"
+                />
+
+                <TextInput
+                  style={s.flexInput}
+                  placeholder="Como aparece en la tarjeta"
+                  placeholderTextColor="#9BB0CA"
+                  autoCapitalize="characters"
+                  value={titular}
+                  onChangeText={setTitular}
+                  maxLength={60}
+                />
+              </View>
+
+              <View style={s.formRow}>
+                <View style={s.half}>
+                  <Text style={s.label}>
+                    Vencimiento
+                  </Text>
+
+                  <View style={s.inputIcon}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color="#6486B3"
+                    />
+
+                    <TextInput
+                      style={s.flexInput}
+                      placeholder="MM/AA"
+                      placeholderTextColor="#9BB0CA"
+                      keyboardType="number-pad"
+                      value={vencimiento}
+                      onChangeText={formatFecha}
+                      maxLength={5}
+                    />
+                  </View>
+                </View>
+
+                <View style={s.half}>
+                  <Text style={s.label}>
+                    CVV
+                  </Text>
+
+                  <View style={s.inputIcon}>
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={18}
+                      color="#6486B3"
+                    />
+
+                    <TextInput
+                      style={s.flexInput}
+                      placeholder="•••"
+                      placeholderTextColor="#9BB0CA"
+                      keyboardType="number-pad"
+                      secureTextEntry
+                      value={cvv}
+                      onChangeText={value =>
+                        setCvv(
+                          value
+                            .replace(/\D/g, "")
+                            .slice(0, 3)
+                        )
+                      }
+                      maxLength={3}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={s.checkRow}
+                onPress={() =>
+                  setSaveCard(!saveCard)
+                }
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={
+                    saveCard
+                      ? "checkbox"
+                      : "square-outline"
+                  }
+                  size={23}
+                  color={BLUE}
+                />
+
+                <Text style={s.checkText}>
+                  Guardar para futuros pagos
+                </Text>
+              </TouchableOpacity>
+
+              <PrimaryButton
+                title={
+                  saveCard
+                    ? "Guardar tarjeta"
+                    : "Validar tarjeta"
+                }
+                icon="checkmark-circle-outline"
+                onPress={agregarTarjeta}
+                disabled={loading}
+                loading={loading}
+              />
+            </View>
+          )}
+
+          {/* ==================================
+                RESUMEN DEL PAGO
+            ================================== */}
+
+          {reserva && (
+            <View style={s.panel}>
+              <SectionTitle
+                icon="receipt-outline"
+                title="Resumen del pago"
+                subtitle="Revisa tu reservación"
+              />
+
+              <View style={s.summaryRow}>
+                <Text style={s.summaryLabel}>
+                  Espacio
+                </Text>
+
+                <Text style={s.summaryValue}>
+                  {reserva.spaceId}
+                </Text>
+              </View>
+
+              <View style={s.summaryRow}>
+                <Text style={s.summaryLabel}>
+                  Duración
+                </Text>
+
+                <Text style={s.summaryValue}>
+                  {reserva.hours} hora(s)
+                </Text>
+              </View>
+
+              <LinearGradient
+                colors={[
+                  "#EAF4FF",
+                  "#DCEBFF"
+                ]}
+                style={s.totalBox}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.totalLabel}>
+                    Total a pagar
+                  </Text>
+
+                  <Text style={s.totalHint}>
+                    Importe de la reserva
+                  </Text>
+                </View>
+
+                <Text style={s.totalAmount}>
+                  Q{Number(reserva.amount).toFixed(2)}
+                </Text>
+              </LinearGradient>
+
+              <PrimaryButton
+                title="Confirmar pago"
+                icon="shield-checkmark-outline"
+                onPress={confirmarPago}
+                disabled={
+                  loading ||
+                  !cards.some(
+                    c => c.id === selectedCard
+                  )
+                }
+                loading={loading}
+              />
+
+              <View style={s.footerNotice}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={17}
+                  color="#7891B1"
+                />
+
+                <Text style={s.footerText}>
+                  Pago simulado. No se realizan
+                  cobros reales.
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* ==================================
+              ONDAS INFERIORES
+          ================================== */}
+
+        <View
+          style={s.bottomWaves}
+          pointerEvents="none"
+        >
+          <Svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 400 110"
+            preserveAspectRatio="none"
+          >
+            <Path
+              d="M0 35 C100 0 220 110 400 35 L400 110 L0 110 Z"
+              fill="#B8D9FF"
+              opacity={0.8}
+            />
+
+            <Path
+              d="M0 70 C135 15 255 135 400 50 L400 110 L0 110 Z"
+              fill="#7DBAFF"
+              opacity={0.8}
+            />
+
+            <Path
+              d="M0 100 C130 55 250 135 400 75 L400 110 L0 110 Z"
+              fill="#459AF5"
+              opacity={0.75}
+            />
+          </Svg>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  </SafeAreaView>
+);
 }
 
 // ==========================================

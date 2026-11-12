@@ -450,12 +450,23 @@ export function ParkingProvider({ children }) {
         `Pago simulado realizado: Q${monto.toFixed(2)}`
       );
 
-      return true;
+      return {
+        ok: true,
+      };
     } catch (error) {
-      console.log("Error al pagar:", error);
-      return false;
+      console.error("ERROR AL PROCESAR PAGO:", {
+        code: error.code,
+        message: error.message,
+        reservationId: id,
+        userId: usuario?.uid,
+      });
+
+      return {
+        ok: false,
+        message: error.message || "Error desconocido",
+      };
     }
-  };
+  }
 
 
   // =========================================
