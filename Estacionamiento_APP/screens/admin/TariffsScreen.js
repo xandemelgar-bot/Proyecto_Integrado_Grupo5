@@ -490,18 +490,7 @@ export default function TariffsScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={s.exampleNote}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={19}
-                  color="#0964D5"
-                />
-
-                <Text style={s.exampleNoteText}>
-                  El ejemplo utiliza las tarifas
-                  guardadas actualmente.
-                </Text>
-              </View>
+          
             </View>
 
             {/* ==================================

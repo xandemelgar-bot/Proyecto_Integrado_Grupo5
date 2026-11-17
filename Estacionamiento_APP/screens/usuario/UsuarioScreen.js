@@ -332,9 +332,7 @@ export default function UsuarioScreen({ navigation }) {
               </Text>
             </View>
 
-            <Text style={s.demoText}>
-              Los datos de esta versión son simulados.
-            </Text>
+            
           </View>
 
           {/* ==================================

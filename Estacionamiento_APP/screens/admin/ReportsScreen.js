@@ -225,7 +225,7 @@ export default function ReportsScreen({ navigation }) {
 
             <Text style={s.heroInfoText}>
               Consulta la ocupación, las reservas
-              y los ingresos simulados.
+              y los ingresos.
             </Text>
           </View>
 
@@ -319,7 +319,7 @@ export default function ReportsScreen({ navigation }) {
               </Text>
 
               <Text style={s.summaryLabel}>
-                Ingresos simulados
+                Ingresos 
               </Text>
             </View>
           </View>
@@ -516,7 +516,7 @@ export default function ReportsScreen({ navigation }) {
 
               <View style={s.generalText}>
                 <Text style={s.generalLabel}>
-                  Ingresos simulados
+                  Ingresos 
                 </Text>
 
                 <Text style={s.generalSubtitle}>
@@ -651,28 +651,7 @@ export default function ReportsScreen({ navigation }) {
               AVISO DE DATOS SIMULADOS
           ================================== */}
 
-          <View style={s.noticeCard}>
-            <View style={s.noticeIcon}>
-              <Ionicons
-                name="information-circle-outline"
-                size={25}
-                color="#D97706"
-              />
-            </View>
-
-            <View style={s.noticeContent}>
-              <Text style={s.noticeTitle}>
-                Datos de demostración
-              </Text>
-
-              <Text style={s.noticeDescription}>
-                Estas gráficas utilizan datos
-                locales simulados. Todavía no
-                representan mediciones históricas
-                del Arduino.
-              </Text>
-            </View>
-          </View>
+          
         </View>
 
         {/* ==================================

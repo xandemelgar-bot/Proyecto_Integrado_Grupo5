@@ -853,18 +853,7 @@ return (
                 subtitle="Introduce los datos de demostración"
               />
 
-              <View style={s.demoNotice}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={21}
-                  color={BLUE}
-                />
-
-                <Text style={s.demoNoticeText}>
-                  Esta pantalla es una simulación.
-                  No ingreses datos de tarjetas reales.
-                </Text>
-              </View>
+              
 
               <Text style={s.label}>
                 Número de tarjeta
