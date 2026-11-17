@@ -1,12 +1,25 @@
 
-const admin = require("firebase-admin");
+require("dotenv").config();
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
+const {
+  initializeApp,
+  getApps,
+  applicationDefault,
+} = require("firebase-admin/app");
+
+const {
+  getFirestore,
+} = require("firebase-admin/firestore");
+
+// Inicializar Firebase solo una vez
+if (getApps().length === 0) {
+  initializeApp({
+    credential: applicationDefault(),
+    projectId: process.env.FIREBASE_PROJECT_ID,
   });
 }
 
-const db = admin.firestore();
+// Conexión a Firestore
+const db = getFirestore();
 
-module.exports = { admin, db };
+module.exports = { db };

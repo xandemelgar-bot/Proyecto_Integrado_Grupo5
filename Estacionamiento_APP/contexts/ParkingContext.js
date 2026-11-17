@@ -15,6 +15,7 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  getDoc,
 } from "firebase/firestore";
 
 import { db } from "../services/firebase";
@@ -242,7 +243,7 @@ export function ParkingProvider({ children }) {
           space.estado === "reservado"
             ? "reservado"
             : arduinoConnected &&
-                sensorSpaces[space.id]
+              sensorSpaces[space.id]
               ? sensorSpaces[space.id]
               : space.estado,
       })),
@@ -267,9 +268,9 @@ export function ParkingProvider({ children }) {
     const consulta = esAdmin
       ? query(referencia)
       : query(
-          referencia,
-          where("userId", "==", usuario.uid)
-        );
+        referencia,
+        where("userId", "==", usuario.uid)
+      );
 
     const unsubscribe = onSnapshot(
       consulta,
@@ -314,9 +315,9 @@ export function ParkingProvider({ children }) {
     const consulta = esAdmin
       ? query(referencia)
       : query(
-          referencia,
-          where("userId", "==", usuario.uid)
-        );
+        referencia,
+        where("userId", "==", usuario.uid)
+      );
 
     const unsubscribe = onSnapshot(
       consulta,
@@ -348,6 +349,51 @@ export function ParkingProvider({ children }) {
 
     return () => unsubscribe();
   }, [usuario?.uid, esAdmin]);
+
+
+  // =========================================
+  // CONSULTAR OCUPACIÓN FÍSICA
+  // =========================================
+
+  const consultarOcupacionFisica = async (spaceId) => {
+    try {
+      const referencia = doc(
+        db,
+        "lecturasSensores",
+        String(spaceId)
+      );
+
+      const documento = await getDoc(referencia);
+
+      if (!documento.exists()) {
+        return {
+          disponible: false,
+          motivo: "No existe una lectura del sensor.",
+        };
+      }
+
+      const datos = documento.data();
+
+      if (datos.ocupacionFisica !== "libre") {
+        return {
+          disponible: false,
+          motivo: "El sensor detecta un vehículo.",
+        };
+      }
+
+      return {
+        disponible: true,
+      };
+    } catch (error) {
+      console.log("Error al consultar sensor:", error);
+
+      return {
+        disponible: false,
+        motivo: "No se pudo comprobar la ocupación.",
+      };
+    }
+  };
+
 
   // =========================================
   // CREAR RESERVA
@@ -390,9 +436,26 @@ export function ParkingProvider({ children }) {
       };
     }
 
+
+    const lectura = await consultarOcupacionFisica(id);
+
+    if (!lectura.disponible) {
+      return {
+        ok: false,
+        message: lectura.motivo,
+      };
+    }
+
+
     const espacioRef = doc(
       db,
       "espacios",
+      String(id)
+    );
+
+    const sensorRef = doc(
+      db,
+      "lecturasSensores",
       String(id)
     );
 
@@ -409,8 +472,43 @@ export function ParkingProvider({ children }) {
       const resultado = await runTransaction(
         db,
         async (transaction) => {
+
           const espacioDoc =
             await transaction.get(espacioRef);
+
+          const sensorDoc =
+            await transaction.get(sensorRef);
+
+          if (!sensorDoc.exists()) {
+            throw new Error(
+              "No hay información del sensor para este espacio."
+            );
+          }
+
+          const sensor = sensorDoc.data();
+
+          if (sensor.ocupacionFisica !== "libre") {
+            throw new Error(
+              "No puedes reservar este espacio porque está ocupado."
+            );
+          }
+
+          // La lectura debe ser reciente.
+          const fechaLectura =
+            sensor.ultimaLectura?.toMillis?.();
+          const antiguedad = Date.now() - fechaLectura;
+          const MAX_ANTIGUEDAD = 30000;
+
+          if (
+            !Number.isFinite(antiguedad) ||
+            antiguedad < 0 ||
+            antiguedad > MAX_ANTIGUEDAD
+          ) {
+            throw new Error(
+              "La información del sensor está desactualizada."
+            );
+          }
+
 
           const estado = espacioDoc.exists()
             ? espacioDoc.data().estado
@@ -460,10 +558,14 @@ export function ParkingProvider({ children }) {
         reservation: resultado,
       };
     } catch (error) {
-      console.log(
-        "Error al reservar:",
-        error
-      );
+      console.log("========== ERROR DE RESERVA ==========");
+      console.log("Código:", error.code);
+      console.log("Mensaje:", error.message);
+      console.log("Espacio:", id);
+      console.log("Duración:", duracion);
+      console.log("Importe:", importe);
+      console.log("Usuario:", usuario.uid);
+      console.log("======================================");
 
       return {
         ok: false,
@@ -472,6 +574,7 @@ export function ParkingProvider({ children }) {
           "No se pudo crear la reserva.",
       };
     }
+
   };
 
   // =========================================
@@ -525,8 +628,17 @@ export function ParkingProvider({ children }) {
             String(reserva.spaceId)
           );
 
+          const sensorRef = doc(
+            db,
+            "lecturasSensores",
+            String(reserva.spaceId)
+          );
+
           const espacioDoc =
             await transaction.get(espacioRef);
+
+          const sensorDoc =
+            await transaction.get(sensorRef);
 
           if (
             !espacioDoc.exists() ||
@@ -541,11 +653,41 @@ export function ParkingProvider({ children }) {
             status: "cancelada",
           });
 
+
+          const sensor = sensorDoc.exists()
+            ? sensorDoc.data()
+            : null;
+
+          const fechaLectura =
+            sensor?.ultimaLectura?.toMillis?.();
+
+          const antiguedad =
+            Date.now() - fechaLectura;
+
+          const lecturaValida =
+            sensor &&
+            ["libre", "ocupado"].includes(
+              sensor.ocupacionFisica
+            ) &&
+            Number.isFinite(antiguedad) &&
+            antiguedad >= 0 &&
+            antiguedad <= 30000;
+
+          if (!lecturaValida) {
+            throw new Error(
+              "No se puede cancelar: la lectura del sensor no está actualizada."
+            );
+          }
+
           transaction.set(espacioRef, {
             nivel: reserva.nivel,
-            estado: "libre",
+            estado:
+              sensor.ocupacionFisica === "ocupado"
+                ? "ocupado"
+                : "libre",
             reservationId: null,
           });
+
 
           return reserva.spaceId;
         }
@@ -725,7 +867,7 @@ export function ParkingProvider({ children }) {
           if (
             espacioDoc.exists() &&
             espacioDoc.data().estado ===
-              "reservado"
+            "reservado"
           ) {
             throw new Error(
               "No puedes modificar un espacio reservado."
