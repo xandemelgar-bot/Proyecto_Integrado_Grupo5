@@ -227,7 +227,10 @@ export default function AdminScreen({ navigation }) {
               size={23}
               color="#FFFFFF"
             />
-
+            <Text>                                                 
+            
+            </Text>
+           
             <Text style={s.heroInfoText}>
               Monitorea y administra tu
               estacionamiento inteligente.
